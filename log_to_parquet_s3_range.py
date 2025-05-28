@@ -1,14 +1,9 @@
-from airflow import DAG
+from airflow.decorators import dag
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.utils.dates import days_ago
-from datetime import timedelta
-from kubernetes.client import models as k8s
-from kubernetes.client import V1ResourceRequirements
-from airflow.operators.python import PythonOperator
-from airflow.exceptions import AirflowFailException
-
-dag_name = "log_to_parquet_s3_range"
-spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
+from datetime import datetime, timedelta
+from airflow.models.param import Param
+from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
 
 default_args = {
     "owner": "airflow",
@@ -16,26 +11,20 @@ default_args = {
     "retry_delay": timedelta(minutes=3),
 }
 
-def validate_conf(**context):
-    dag_run = context.get("dag_run")
-    if not dag_run or not dag_run.conf:
-        raise AirflowFailException("❌ start_date / end_date 미지정. DAG는 Trigger할 때만 실행하세요.")
-    if "start_date" not in dag_run.conf or "end_date" not in dag_run.conf:
-        raise AirflowFailException("❌ start_date / end_date 누락됨.")
-
-with DAG(
-    dag_id=dag_name,
+@dag(
+    dag_id="log_to_parquet_s3_range",
     default_args=default_args,
-    start_date=days_ago(1),
     schedule_interval=None,
+    start_date=days_ago(1),
     catchup=False,
-) as dag:
+    params={
+        "start_date": Param(default="2025-05-01", type="string", format="%Y-%m-%d", description="Start date"),
+        "end_date": Param(default="2025-05-02", type="string", format="%Y-%m-%d", description="End date"),
+    },
+)
+def log_to_parquet_dag():
 
-    validate_input = PythonOperator(
-        task_id="validate_input",
-        python_callable=validate_conf,
-        provide_context=True,
-    )
+    spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
 
     spark_submit = KubernetesPodOperator(
         task_id="run_spark_submit_s3_script",
@@ -46,7 +35,7 @@ with DAG(
         arguments=[
             "--master", "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com",
             "--deploy-mode", "cluster",
-            "--name", dag_name,
+            "--name", "log_to_parquet_s3_range",
             "--conf", "spark.kubernetes.namespace=airflow",
             "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=airflow-irsa",
             "--conf", "spark.kubernetes.container.image.pullSecrets=ecr-pull-secret",
@@ -54,26 +43,26 @@ with DAG(
             "--conf", "spark.executor.instances=1",
             "--conf", "spark.executor.memory=512m",
             "--conf", "spark.executor.cores=1",
-            "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
-            "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
             "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
             "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
             "--conf", f"spark.kubernetes.container.image={spark_image}",
             "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
+            "--conf", "spark.ui.proxyBase=/spark-ui/log_to_parquet_s3_range",
+            "--conf", "spark.kubernetes.driver.label.spark-ui-selector=log_to_parquet_s3_range",
             "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
-            "--start-date", "{{ dag_run.conf['start_date'] }}",
-            "--end-date", "{{ dag_run.conf['end_date'] }}"
+            "--start-date", "{{ params.start_date }}",
+            "--end-date", "{{ params.end_date }}",
         ],
         get_logs=True,
         is_delete_operator_pod=True,
         service_account_name="airflow-irsa",
-        image_pull_secrets=[k8s.V1LocalObjectReference(name="ecr-pull-secret")],
+        image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
             requests={"memory": "1Gi", "cpu": "500m"},
             limits={"memory": "2Gi", "cpu": "1000m"},
         )
     )
 
-    spark_submit.template_fields = ("arguments",)
+    spark_submit
 
-    validate_input >> spark_submit
+dag_instance = log_to_parquet_dag()
