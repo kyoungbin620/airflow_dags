@@ -42,8 +42,6 @@ with DAG(
             "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
             "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
             "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
-                # 기존에 들어있던…
-            "--conf", "spark.kubernetes.container.image=577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4",
             # ↓ 아래 한 줄을 추가
             "--conf", "spark.kubernetes.driver.container.image=577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4",
             "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
