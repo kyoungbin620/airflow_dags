@@ -50,8 +50,10 @@ with DAG(
         is_delete_operator_pod=True,
         service_account_name="spark",
         image_pull_secrets=[k8s.V1LocalObjectReference(name="ecr-pull-secret")],
-        resources=k8s.V1ResourceRequirements(
-            requests={"memory": "1Gi", "cpu": "500m"},
-            limits={"memory": "2Gi", "cpu": "1000m"},
-        )
+        resources={
+            "request_memory": "1Gi",
+            "request_cpu": "500m",
+            "limit_memory": "2Gi",
+            "limit_cpu": "1000m",
+        },
     )
