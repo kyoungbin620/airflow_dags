@@ -24,14 +24,14 @@ with DAG(
     spark_submit = KubernetesPodOperator(
         task_id="run_spark_submit_s3_script",
         name="spark-submit-s3-script",
-        namespace="jupyter",
+        namespace="airflow",
         image="577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4",
         cmds=["/opt/spark/bin/spark-submit"],
         arguments=[
             "--master", "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com",
             "--deploy-mode", "cluster",
             "--name", dag_name,
-            "--conf", "spark.kubernetes.namespace=jupyter",
+            "--conf", "spark.kubernetes.namespace=airflow",
             "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=spark",
             "--conf", "spark.kubernetes.container.image=577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4",
             "--conf", "spark.kubernetes.container.image.pullSecrets=ecr-pull-secret",
@@ -49,7 +49,7 @@ with DAG(
         ],
         get_logs=True,
         is_delete_operator_pod=True,
-        service_account_name="spark",
+        service_account_name="airflow-irsa",
         image_pull_secrets=[k8s.V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
             requests={"memory": "1Gi", "cpu": "500m"},
