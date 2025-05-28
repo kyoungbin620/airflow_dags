@@ -50,7 +50,7 @@ with DAG(
             "--end-date", "2025-05-26"
         ],
         get_logs=True,
-        is_delete_operator_pod=False,
+        is_delete_operator_pod=True,
         service_account_name="airflow-irsa",
         image_pull_secrets=[k8s.V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
