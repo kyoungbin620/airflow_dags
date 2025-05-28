@@ -1,45 +1,57 @@
-from datetime import datetime, timedelta
-
 from airflow import DAG
-from airflow.operators.bash import BashOperator
+from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
+from airflow.utils.dates import days_ago
+from datetime import timedelta
+from kubernetes.client import models as k8s
 
-# 기본 인자 설정
+dag_name = "log_to_parquet_s3_script"
+
 default_args = {
-    'owner': 'airflow',
-    'depends_on_past': False,  # 이전 DAG 실행 여부에 따라 실행 여부 결정 안 함
-    'email_on_failure': False,  # 실패 시 이메일 알림 비활성화
-    'email_on_retry': False,    # 재시도 시 이메일 알림 비활성화
-    'retries': 1,               # 실패 시 재시도 횟수
-    'retry_delay': timedelta(minutes=5),  # 재시도 간격
+    "owner": "airflow",
+    "retries": 1,
+    "retry_delay": timedelta(minutes=3),
 }
 
-# DAG 정의
 with DAG(
-    'simple_hello_world',  # DAG ID
+    dag_id=dag_name,
     default_args=default_args,
-    description='간단한 Hello World DAG 예시',
-    schedule_interval=timedelta(days=1),  # 매일 실행
-    start_date=datetime(2025, 5, 1),      # 시작일
-    catchup=False,                         # 백필(false)
+    start_date=days_ago(1),
+    schedule_interval=None,
+    catchup=False,
 ) as dag:
 
-    # 1단계: 현재 날짜 출력
-t1 = BashOperator(
-    task_id='print_date',
-    bash_command='date',
-)
-
-    # 2단계: 잠시 대기
-t2 = BashOperator(
-    task_id='sleep',
-    bash_command='sleep 5',
-)
-
-    # 3단계: Hello Airflow 출력
-t3 = BashOperator(
-    task_id='print_hello',
-    bash_command='echo "Hello Airflow!"',
-)
-
-    # 실행 순서 정의
-t1 >> t2 >> t3
+    spark_submit = KubernetesPodOperator(
+        task_id="run_spark_submit_s3_script",
+        name="spark-submit-s3-script",
+        namespace="airflow",
+        image="577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4",
+        cmds=["/opt/spark/bin/spark-submit"],
+        arguments=[
+            "--master", "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com",
+            "--deploy-mode", "cluster",
+            "--name", dag_name,
+            "--conf", "spark.kubernetes.namespace=jupyter",
+            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=spark",
+            "--conf", "spark.kubernetes.container.image=577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4",
+            "--conf", "spark.kubernetes.container.image.pullSecrets=ecr-pull-secret",
+            "--conf", "spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
+            "--conf", "spark.executor.instances=1",
+            "--conf", "spark.executor.memory=512m",
+            "--conf", "spark.executor.cores=1",
+            "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
+            "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
+            "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
+            "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
+            "s3a://view-aim-monitoring-prod/jobs/monitoring_logs_to_parquet_daily.py",
+            "--start-date", "2025-05-26",
+            "--end-date", "2025-05-26"
+        ],
+        get_logs=True,
+        is_delete_operator_pod=True,
+        service_account_name="spark",
+        image_pull_secrets=[k8s.V1LocalObjectReference(name="ecr-pull-secret")],
+        resources=k8s.V1ResourceRequirements(
+            requests={"memory": "1Gi", "cpu": "500m"},
+            limits={"memory": "2Gi", "cpu": "1000m"},
+        )
+    )
