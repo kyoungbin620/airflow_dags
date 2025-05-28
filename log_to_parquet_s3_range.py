@@ -4,7 +4,8 @@ from airflow.utils.dates import days_ago
 from datetime import timedelta
 from kubernetes.client import models as k8s
 from kubernetes.client import V1ResourceRequirements
-
+from airflow.operators.python import PythonOperator
+from airflow.exceptions import AirflowFailException
 
 dag_name = "log_to_parquet_s3_range"
 spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
@@ -15,6 +16,12 @@ default_args = {
     "retry_delay": timedelta(minutes=3),
 }
 
+def validate_conf(**context):
+    dag_run = context.get("dag_run")
+    if not dag_run or not dag_run.conf:
+        raise AirflowFailException("❌ start_date / end_date 미지정. DAG는 Trigger할 때만 실행하세요.")
+    if "start_date" not in dag_run.conf or "end_date" not in dag_run.conf:
+        raise AirflowFailException("❌ start_date / end_date 누락됨.")
 
 with DAG(
     dag_id=dag_name,
@@ -23,6 +30,12 @@ with DAG(
     schedule_interval=None,
     catchup=False,
 ) as dag:
+
+    validate_input = PythonOperator(
+        task_id="validate_input",
+        python_callable=validate_conf,
+        provide_context=True,
+    )
 
     spark_submit = KubernetesPodOperator(
         task_id="run_spark_submit_s3_script",
@@ -48,8 +61,8 @@ with DAG(
             "--conf", f"spark.kubernetes.container.image={spark_image}",
             "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
             "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
-            "--start-date", "{{ dag_run.conf['start_date'] | default('2025-05-01') }}",
-            "--end-date", "{{ dag_run.conf['end_date'] | default('2025-05-02') }}"
+            "--start-date", "{{ dag_run.conf['start_date'] }}",
+            "--end-date", "{{ dag_run.conf['end_date'] }}"
         ],
         get_logs=True,
         is_delete_operator_pod=True,
@@ -62,3 +75,5 @@ with DAG(
     )
 
     spark_submit.template_fields = ("arguments",)
+
+    validate_input >> spark_submit
