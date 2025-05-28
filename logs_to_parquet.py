@@ -33,7 +33,6 @@ with DAG(
             "--name", dag_name,
             "--conf", "spark.kubernetes.namespace=airflow",
             "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=airflow-irsa",
-            "--conf", "spark.kubernetes.container.image=577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4",
             "--conf", "spark.kubernetes.container.image.pullSecrets=ecr-pull-secret",
             "--conf", "spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
             "--conf", "spark.executor.instances=1",
@@ -43,6 +42,7 @@ with DAG(
             "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
             "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
             "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
+            # 실제 처리 스크립트 위치
             "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
             "--start-date", "2025-05-26",
             "--end-date", "2025-05-26"
@@ -56,3 +56,5 @@ with DAG(
             limits={"memory": "2Gi", "cpu": "1000m"},
         )
     )
+
+    spark_submit
