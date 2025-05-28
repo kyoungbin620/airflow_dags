@@ -1,18 +1,7 @@
-from airflow import DAG
-from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
-from airflow.utils.dates import days_ago
-from datetime import timedelta
-from kubernetes.client import models as k8s
-from kubernetes.client import V1ResourceRequirements
+from airflow.models import Variable
+from airflow.utils.helpers import chain
 
-dag_name = "log_to_parquet_s3_range"
-spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
-
-default_args = {
-    "owner": "airflow",
-    "retries": 1,
-    "retry_delay": timedelta(minutes=3),
-}
+from airflow.operators.bash import BashOperator  # 단순 확인용
 
 with DAG(
     dag_id=dag_name,
@@ -46,8 +35,8 @@ with DAG(
             "--conf", f"spark.kubernetes.container.image={spark_image}",
             "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
             "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
-            "--start-date", "{{ dag_run.conf['start_date'] }}",
-            "--end-date", "{{ dag_run.conf['end_date'] }}"
+            "--start-date", "{{ dag_run.conf['start_date'] | default('2025-05-01') }}",
+            "--end-date", "{{ dag_run.conf['end_date'] | default('2025-05-02') }}"
         ],
         get_logs=True,
         is_delete_operator_pod=True,
@@ -59,4 +48,4 @@ with DAG(
         )
     )
 
-    spark_submit
+    spark_submit.template_fields = ("arguments",)
