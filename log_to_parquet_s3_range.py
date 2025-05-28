@@ -1,7 +1,20 @@
-from airflow.models import Variable
-from airflow.utils.helpers import chain
+from airflow import DAG
+from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
+from airflow.utils.dates import days_ago
+from datetime import timedelta
+from kubernetes.client import models as k8s
+from kubernetes.client import V1ResourceRequirements
 
-from airflow.operators.bash import BashOperator  # 단순 확인용
+
+dag_name = "log_to_parquet_s3_range"
+spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
+
+default_args = {
+    "owner": "airflow",
+    "retries": 1,
+    "retry_delay": timedelta(minutes=3),
+}
+
 
 with DAG(
     dag_id=dag_name,
