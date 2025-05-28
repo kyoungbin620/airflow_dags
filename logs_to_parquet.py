@@ -6,8 +6,7 @@ from kubernetes.client import models as k8s
 from kubernetes.client import V1ResourceRequirements
 
 dag_name = "log_to_parquet_s3_script"
-spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
-
+spark_images ="577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
 default_args = {
     "owner": "airflow",
     "retries": 1,
@@ -26,7 +25,7 @@ with DAG(
         task_id="run_spark_submit_s3_script",
         name="spark-submit-s3-script",
         namespace="airflow",
-        image=spark_image,
+        image=f"{spark_images}",
         cmds=["/opt/spark/bin/spark-submit"],
         arguments=[
             "--master", "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com",
@@ -43,8 +42,10 @@ with DAG(
             "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
             "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
             "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
-            "--conf", {spark_image},
-            "--conf", {spark_image},
+                # 기존에 들어있던…
+            "--conf", f"spark.kubernetes.container.image={spark_images}",
+            # ↓ 아래 한 줄을 추가
+            "--conf", f"spark.kubernetes.driver.container.image={spark_images},
             "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
             "--start-date", "2025-05-26",
             "--end-date", "2025-05-26"
