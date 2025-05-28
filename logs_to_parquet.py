@@ -24,7 +24,7 @@ with DAG(
     spark_submit = KubernetesPodOperator(
         task_id="run_spark_submit_s3_script",
         name="spark-submit-s3-script",
-        namespace="airflow",
+        namespace="jupyter",
         image="577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4",
         cmds=["/opt/spark/bin/spark-submit"],
         arguments=[
