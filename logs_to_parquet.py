@@ -32,7 +32,7 @@ with DAG(
             "--deploy-mode", "cluster",
             "--name", dag_name,
             "--conf", "spark.kubernetes.namespace=airflow",
-            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=spark",
+            "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=airflow-irsa",
             "--conf", "spark.kubernetes.container.image=577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4",
             "--conf", "spark.kubernetes.container.image.pullSecrets=ecr-pull-secret",
             "--conf", "spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
@@ -48,7 +48,7 @@ with DAG(
             "--end-date", "2025-05-26"
         ],
         get_logs=True,
-        is_delete_operator_pod=True,
+        is_delete_operator_pod=False,
         service_account_name="airflow-irsa",
         image_pull_secrets=[k8s.V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
