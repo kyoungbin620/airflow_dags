@@ -1,12 +1,11 @@
 from airflow import DAG
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
-from airflow.utils.dates import days_ago
-from datetime import timedelta
+from airflow.utils.dates import datetime, timedelta
 from kubernetes.client import models as k8s
 from kubernetes.client import V1ResourceRequirements
 
-dag_name = "log_to_parquet_s3_script"
-spark_images = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
+dag_name = "log_to_parquet_daily_auto"
+spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
 
 default_args = {
     "owner": "airflow",
@@ -17,16 +16,16 @@ default_args = {
 with DAG(
     dag_id=dag_name,
     default_args=default_args,
-    start_date=days_ago(1),
-    schedule_interval=None,
+    start_date=datetime(2025, 5, 28),  # 시작 날짜 적절히 설정
+    schedule_interval="0 2 * * *",  # 매일 새벽 2시
     catchup=False,
 ) as dag:
 
     spark_submit = KubernetesPodOperator(
-        task_id="run_spark_submit_s3_script",
-        name="spark-submit-s3-script",
+        task_id="run_spark_submit_s3_script_daily",
+        name="spark-submit-s3-script-daily",
         namespace="airflow",
-        image=spark_images,
+        image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
         arguments=[
             "--master", "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com",
@@ -43,11 +42,11 @@ with DAG(
             "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
             "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
             "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
-            "--conf", f"spark.kubernetes.container.image={spark_images}",
-            "--conf", f"spark.kubernetes.driver.container.image={spark_images}",
+            "--conf", f"spark.kubernetes.container.image={spark_image}",
+            "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
             "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
-            "--start-date", "2025-05-26",
-            "--end-date", "2025-05-26"
+            "--start-date", "{{ ds }}",
+            "--end-date", "{{ ds }}"
         ],
         get_logs=True,
         is_delete_operator_pod=True,
