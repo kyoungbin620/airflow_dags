@@ -42,7 +42,7 @@ with DAG(
             "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
             "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
             "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
-            "s3a://view-aim-monitoring-prod/jobs/monitoring_logs_to_parquet_daily.py",
+            "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
             "--start-date", "2025-05-26",
             "--end-date", "2025-05-26"
         ],
