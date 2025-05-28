@@ -43,8 +43,8 @@ with DAG(
             "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
             "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
             "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
-            "--conf", spark_image,
-            "--conf", spark_image,
+            "--conf", {spark_image},
+            "--conf", {spark_image},
             "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
             "--start-date", "2025-05-26",
             "--end-date", "2025-05-26"
