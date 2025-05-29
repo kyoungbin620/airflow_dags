@@ -1,4 +1,4 @@
-from airflow.decorators import dag
+from airflow.decorators import dag, task
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.utils.dates import days_ago
 from datetime import timedelta
@@ -30,6 +30,15 @@ default_args = {
 )
 def raw_to_parquet_dag():
 
+    @task()
+    def log_inputs(params=None):
+        import logging
+        logging.info(f"[INPUT] start_date: {params['start_date']}")
+        logging.info(f"[INPUT] end_date: {params['end_date']}")
+        logging.info(f"[INPUT] hour: {params.get('hour')}")
+    
+    log_params = log_inputs()
+
     arguments = [
         "--master", api_server,
         "--deploy-mode", "cluster",
@@ -40,7 +49,6 @@ def raw_to_parquet_dag():
         "--conf", "spark.kubernetes.container.image.pullSecrets=ecr-pull-secret",
         "--conf", "spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
 
-        # 리소스 설정 (Executor)
         "--conf", "spark.executor.instances=1",
         "--conf", "spark.executor.memory=1g",
         "--conf", "spark.executor.cores=1",
@@ -50,7 +58,6 @@ def raw_to_parquet_dag():
         "--conf", "spark.kubernetes.executor.request.cpu=500m",
         "--conf", "spark.kubernetes.executor.limit.cpu=1000m",
 
-        # 리소스 설정 (Driver)
         "--conf", "spark.driver.memory=1g",
         "--conf", "spark.driver.cores=1",
         "--conf", "spark.driver.memoryOverhead=512",
@@ -95,6 +102,6 @@ def raw_to_parquet_dag():
         ),
     )
 
-    spark_submit
+    log_params >> spark_submit
 
 dag_instance = raw_to_parquet_dag()
