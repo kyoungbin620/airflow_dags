@@ -49,7 +49,7 @@ def log_to_parquet_dag():
             "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
             "--conf", "spark.ui.proxyBase=/spark-ui/log_to_parquet_s3_range",
             "--conf", "spark.kubernetes.driver.label.spark-ui-selector=log_to_parquet_s3_range",
-            "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
+            "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily_v1.0.0.py",
             "--start-date", "{{ params.start_date }}",
             "--end-date", "{{ params.end_date }}",
         ],

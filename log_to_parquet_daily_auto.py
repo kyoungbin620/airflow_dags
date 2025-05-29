@@ -48,7 +48,7 @@ with DAG(
                 "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
                 "--conf", f"spark.kubernetes.container.image={spark_image}",
                 "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
-                "s3a://creatz-aim-members/kbjin/monitoring_logs_to_parquet_daily.py",
+                "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily_v1.0.0.py",                
                 "--start-date", context["ds"],
                 "--end-date", context["ds"]
             ],
