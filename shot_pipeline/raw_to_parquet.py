@@ -45,8 +45,8 @@ def raw_to_parquet_dag():
         "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
         "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
         "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
-        "s3a://creatz-airflow-jobs/shot_data/zips/raw_to_parquet_v1.0.0.zip",
-        "main.py",
+        "--py-files", "s3a://creatz-airflow-jobs/shot_data/zips/raw_to_parquet_v1.0.0.zip",
+        "main.py",  # 이건 zip 안에 들어있는 이름 그대로
         "--start-date", "{{ params.start_date }}",
         "--end-date", "{{ params.end_date }}",
     ]
@@ -65,7 +65,7 @@ def raw_to_parquet_dag():
         cmds=["/opt/spark/bin/spark-submit"],
         arguments=arguments,
         get_logs=True,
-        is_delete_operator_pod=True,
+        is_delete_operator_pod=False,
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
