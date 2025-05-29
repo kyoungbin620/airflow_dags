@@ -46,7 +46,7 @@ def raw_to_parquet_dag():
         "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
         "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
         "--py-files", "s3a://creatz-airflow-jobs/shot_data/zips/raw_to_parquet_v1.0.0.zip",
-        "main.py",  # 이건 zip 안에 들어있는 이름 그대로
+        "s3a://creatz-airflow-jobs/shot_data/zips/raw_to_parquet_v1.0.0.zip",  # ✅ 실행 대상은 zip 전체
         "--start-date", "{{ params.start_date }}",
         "--end-date", "{{ params.end_date }}",
     ]
