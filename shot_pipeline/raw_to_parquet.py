@@ -62,7 +62,7 @@ def raw_to_parquet_dag():
 
         # Python 의존성(zip) 및 애플리케이션 리소스
         "--py-files", "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip",
-        "s3://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
+        "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
 
         # 사용자 파라미터
         "--start-date", "{{ params.start_date }}",
