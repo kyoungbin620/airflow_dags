@@ -24,7 +24,7 @@ default_args = {
     params={
         "start_date": Param(default="2025-05-01", type="string", format="%Y-%m-%d", description="시작 날짜"),
         "end_date":   Param(default="2025-05-02", type="string", format="%Y-%m-%d", description="종료 날짜"),
-        "hour":       Param(default=None, type=["null", "string"], description="특정 시간 (00-23; 미지정시 전체 시간)"),
+        "hour":       Param(default=None, type=["null", "string"], description="실행할 시간 (00~23). 입력하지 않으면 00시부터 23시까지 전체 반복 실행"),
     },
     tags=["spark", "s3", "parquet"],
 )
