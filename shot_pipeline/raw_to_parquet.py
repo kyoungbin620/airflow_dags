@@ -1,4 +1,4 @@
-from airflow.decorators import dag, task
+from airflow.decorators import dag
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.utils.dates import days_ago
 from datetime import timedelta
@@ -28,7 +28,10 @@ default_args = {
     },
     tags=["spark", "s3", "parquet"],
 )
+
+
 def raw_to_parquet_dag():
+
 
     @task()
     def log_inputs(params=None):
@@ -40,46 +43,42 @@ def raw_to_parquet_dag():
     log_params = log_inputs()
 
     arguments = [
+        # Kubernetes 클러스터 모드 접속
         "--master", api_server,
         "--deploy-mode", "cluster",
 
+        # Spark-on-K8s 기본 설정
         "--name", dag_name,
         "--conf", "spark.kubernetes.namespace=airflow",
         "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=airflow-irsa",
         "--conf", "spark.kubernetes.container.image.pullSecrets=ecr-pull-secret",
         "--conf", "spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
 
+        # 리소스 설정
         "--conf", "spark.executor.instances=1",
-        "--conf", "spark.executor.memory=1g",
+        "--conf", "spark.executor.memory=512m",
         "--conf", "spark.executor.cores=1",
-        "--conf", "spark.executor.memoryOverhead=512",
-        "--conf", "spark.kubernetes.executor.request.memory=1Gi",
-        "--conf", "spark.kubernetes.executor.limit.memory=2Gi",
-        "--conf", "spark.kubernetes.executor.request.cpu=500m",
-        "--conf", "spark.kubernetes.executor.limit.cpu=1000m",
-
-        "--conf", "spark.driver.memory=1g",
-        "--conf", "spark.driver.cores=1",
-        "--conf", "spark.driver.memoryOverhead=512",
-        "--conf", "spark.kubernetes.driver.request.memory=1Gi",
-        "--conf", "spark.kubernetes.driver.limit.memory=2Gi",
-        "--conf", "spark.kubernetes.driver.request.cpu=500m",
-        "--conf", "spark.kubernetes.driver.limit.cpu=1000m",
-
         "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
         "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
 
+        
+
+        # 이미지 설정
         "--conf", f"spark.kubernetes.container.image={spark_image}",
         "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
 
+        # UI 프록시 라우팅
         "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
         "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
 
+        # (★ 필수) S3→로컬 스테이징 경로 지정
         "--conf", "spark.kubernetes.file.upload.path=local:///opt/spark/tmp",
 
+        # Python 의존성(zip) 및 애플리케이션 리소스
         "--py-files", "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip",
         "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
 
+        # 사용자 파라미터
         "--start-date", "{{ params.start_date }}",
         "--end-date",   "{{ params.end_date }}",
         "--hour",       "{{ params.hour or '' }}",
