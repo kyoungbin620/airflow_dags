@@ -18,13 +18,18 @@ with DAG(
     dag_id=dag_name,
     default_args=default_args,
     start_date=datetime(2025, 5, 28),
-    schedule_interval="0 2 * * *",
+    schedule_interval="0 2 * * *",  # 매일 2시 실행
     catchup=False,
     tags=["spark", "s3", "parquet"],
 ) as dag:
 
     @task()
     def run_spark_job(**context):
+        from datetime import datetime, timedelta
+
+        execution_date = datetime.strptime(context["ds"], "%Y-%m-%d")
+        prev_date_str = (execution_date - timedelta(days=1)).strftime("%Y-%m-%d")
+
         return KubernetesPodOperator(
             task_id="run_spark_submit_s3_script_daily",
             name="spark-submit-s3-script-daily",
@@ -48,9 +53,9 @@ with DAG(
                 "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
                 "--conf", f"spark.kubernetes.container.image={spark_image}",
                 "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
-                "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily_v1.0.0.py",                
-                "--start-date", context["ds"],
-                "--end-date", context["ds"]
+                "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily_v1.0.0.py",
+                "--start-date", prev_date_str,
+                "--end-date", prev_date_str,
             ],
             get_logs=True,
             is_delete_operator_pod=True,
