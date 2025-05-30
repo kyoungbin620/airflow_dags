@@ -89,9 +89,14 @@ def raw_to_parquet_dag():
     
     # Spark 로그 레벨 설정 추가
     arguments.extend([
-        "--conf", "spark.driver.extraJavaOptions=-Dlog4j.rootCategory=INFO,console",
-        "--conf", "spark.executor.extraJavaOptions=-Dlog4j.rootCategory=WARN,console",
-        "--conf", "spark.log.level=INFO"
+        # Driver와 Executor 모두 동일한 로그 레벨 적용
+        "--conf", "spark.driver.extraJavaOptions=-Dlog4j.rootCategory=INFO,console -Dlog4j.appender.console=org.apache.log4j.ConsoleAppender -Dlog4j.appender.console.target=System.err -Dlog4j.appender.console.layout=org.apache.log4j.PatternLayout -Dlog4j.appender.console.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n",
+        "--conf", "spark.executor.extraJavaOptions=-Dlog4j.rootCategory=INFO,console -Dlog4j.appender.console=org.apache.log4j.ConsoleAppender -Dlog4j.appender.console.target=System.err -Dlog4j.appender.console.layout=org.apache.log4j.PatternLayout -Dlog4j.appender.console.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n",
+        # Spark 자체 로그 레벨 설정
+        "--conf", "spark.log.level=INFO",
+        # 컨테이너 로그 수집 활성화
+        "--conf", "spark.kubernetes.driver.container.log.stdoutFallback.enabled=true",
+        "--conf", "spark.kubernetes.executor.container.log.stdoutFallback.enabled=true"
     ])
     
     # UI 프록시 라우팅 (동적 설정이라 별도 추가)
