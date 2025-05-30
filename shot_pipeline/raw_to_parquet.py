@@ -59,7 +59,6 @@ spark_configs = {
     params={
         "start_date": Param(default="2025-05-01", type="string", format="%Y-%m-%d", description="시작 날짜"),
         "end_date":   Param(default="2025-05-02", type="string", format="%Y-%m-%d", description="종료 날짜"),
-        "hour":       Param(default=None, type=["null", "string"], description="실행할 시간 (00~23). 입력하지 않으면 00시부터 23시까지 전체 반복 실행"),
     },
     tags=["spark", "s3", "parquet"],
 )
@@ -73,7 +72,6 @@ def raw_to_parquet_dag():
         import logging
         logging.info(f"[INPUT] start_date: {params['start_date']}")
         logging.info(f"[INPUT] end_date: {params['end_date']}")
-        logging.info(f"[INPUT] hour: {params.get('hour')}")
     
     log_params = log_inputs()
 
@@ -101,7 +99,6 @@ def raw_to_parquet_dag():
         "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
         "--start-date", "{{ params.start_date }}",
         "--end-date", "{{ params.end_date }}",
-        "--hour", "{{ params.hour or '' }}",
     ])
 
     spark_submit = KubernetesPodOperator(
