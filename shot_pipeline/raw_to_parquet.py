@@ -87,6 +87,13 @@ def raw_to_parquet_dag():
     for key, value in spark_configs.items():
         arguments.extend(["--conf", f"{key}={value}"])
     
+    # Spark 로그 레벨 설정 추가
+    arguments.extend([
+        "--conf", "spark.driver.extraJavaOptions=-Dlog4j.rootCategory=WARN,console",
+        "--conf", "spark.executor.extraJavaOptions=-Dlog4j.rootCategory=WARN,console",
+        "--conf", "spark.log.level=INFO"
+    ])
+    
     # UI 프록시 라우팅 (동적 설정이라 별도 추가)
     arguments.extend([
         "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
