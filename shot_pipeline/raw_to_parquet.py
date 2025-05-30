@@ -18,24 +18,23 @@ default_args = {
 # Spark 설정 중앙 관리
 spark_configs = {
     # 메모리 관리 (노드 상황 고려)
-    "spark.driver.memory": "1g",
-    "spark.driver.maxResultSize": "512m",
-    "spark.executor.memory": "1g",
-    "spark.executor.memoryOverhead": "512m",
+    "spark.driver.memory": "4g",
+    "spark.driver.maxResultSize": "2g",
+    "spark.executor.memory": "4g",
+    "spark.executor.memoryOverhead": "1g",
     
     # Executor 설정
     "spark.dynamicAllocation.enabled": "true",
-    "spark.dynamicAllocation.minExecutors": "1",
-    "spark.dynamicAllocation.maxExecutors": "2",
-    "spark.dynamicAllocation.initialExecutors": "1",
-    "spark.executor.cores": "1",
+    "spark.dynamicAllocation.minExecutors": "2",
+    "spark.dynamicAllocation.maxExecutors": "8",
+    "spark.executor.cores": "2",
     
     # 성능 최적화
     "spark.sql.adaptive.enabled": "true",
     "spark.sql.adaptive.coalescePartitions.enabled": "true",
-    "spark.sql.shuffle.partitions": "100",
+    "spark.sql.shuffle.partitions": "200",
     "spark.memory.offHeap.enabled": "true",
-    "spark.memory.offHeap.size": "512m",
+    "spark.memory.offHeap.size": "2g",
     
     # 동적 파티션 관리
     "spark.sql.sources.partitionOverwriteMode": "dynamic",
@@ -122,8 +121,8 @@ def raw_to_parquet_dag():
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
-            requests={"memory": "1.5Gi", "cpu": "500m"},
-            limits={"memory": "2Gi", "cpu": "1000m"},
+            requests={"memory": "5Gi", "cpu": "2000m"},
+            limits={"memory": "6Gi", "cpu": "3000m"},
         ),
     )
 
