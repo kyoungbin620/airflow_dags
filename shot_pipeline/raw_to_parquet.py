@@ -15,6 +15,41 @@ default_args = {
     "retry_delay": timedelta(minutes=3),
 }
 
+# Spark 설정 중앙 관리
+spark_configs = {
+    # 메모리 관리 (노드 상황 고려)
+    "spark.driver.memory": "1g",
+    "spark.driver.maxResultSize": "512m",
+    "spark.executor.memory": "1g",
+    "spark.executor.memoryOverhead": "512m",
+    
+    # Executor 설정
+    "spark.dynamicAllocation.enabled": "true",
+    "spark.dynamicAllocation.minExecutors": "1",
+    "spark.dynamicAllocation.maxExecutors": "2",
+    "spark.dynamicAllocation.initialExecutors": "1",
+    "spark.executor.cores": "1",
+    
+    # 성능 최적화
+    "spark.sql.adaptive.enabled": "true",
+    "spark.sql.adaptive.coalescePartitions.enabled": "true",
+    "spark.sql.shuffle.partitions": "100",
+    "spark.memory.offHeap.enabled": "true",
+    "spark.memory.offHeap.size": "512m",
+    
+    # 동적 파티션 관리
+    "spark.sql.sources.partitionOverwriteMode": "dynamic",
+    
+    # Kubernetes 설정
+    "spark.kubernetes.namespace": "airflow",
+    "spark.kubernetes.authenticate.driver.serviceAccountName": "airflow-irsa",
+    "spark.kubernetes.container.image.pullSecrets": "ecr-pull-secret",
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
+    "spark.kubernetes.container.image": spark_image,
+    "spark.kubernetes.driver.container.image": spark_image,
+    "spark.kubernetes.file.upload.path": "local:///opt/spark/tmp",
+}
+
 @dag(
     dag_id=dag_name,
     default_args=default_args,
@@ -42,47 +77,32 @@ def raw_to_parquet_dag():
     
     log_params = log_inputs()
 
+    # Spark 설정을 arguments로 변환
     arguments = [
         # Kubernetes 클러스터 모드 접속
         "--master", api_server,
         "--deploy-mode", "cluster",
-
-        # Spark-on-K8s 기본 설정
         "--name", dag_name,
-        "--conf", "spark.kubernetes.namespace=airflow",
-        "--conf", "spark.kubernetes.authenticate.driver.serviceAccountName=airflow-irsa",
-        "--conf", "spark.kubernetes.container.image.pullSecrets=ecr-pull-secret",
-        "--conf", "spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
-
-        # 리소스 설정
-        "--conf", "spark.executor.instances=1",
-        "--conf", "spark.executor.memory=512m",
-        "--conf", "spark.executor.cores=1",
-        "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
-        "--conf", "spark.sql.sources.partitionOverwriteMode=dynamic",
-
-        
-
-        # 이미지 설정
-        "--conf", f"spark.kubernetes.container.image={spark_image}",
-        "--conf", f"spark.kubernetes.driver.container.image={spark_image}",
-
-        # UI 프록시 라우팅
+    ]
+    
+    # 설정을 arguments에 추가
+    for key, value in spark_configs.items():
+        arguments.extend(["--conf", f"{key}={value}"])
+    
+    # UI 프록시 라우팅 (동적 설정이라 별도 추가)
+    arguments.extend([
         "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
         "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
-
-        # (★ 필수) S3→로컬 스테이징 경로 지정
-        "--conf", "spark.kubernetes.file.upload.path=local:///opt/spark/tmp",
-
-        # Python 의존성(zip) 및 애플리케이션 리소스
+    ])
+    
+    # 애플리케이션 리소스
+    arguments.extend([
         "--py-files", "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip",
         "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
-
-        # 사용자 파라미터
         "--start-date", "{{ params.start_date }}",
-        "--end-date",   "{{ params.end_date }}",
-        "--hour",       "{{ params.hour or '' }}",
-    ]
+        "--end-date", "{{ params.end_date }}",
+        "--hour", "{{ params.hour or '' }}",
+    ])
 
     spark_submit = KubernetesPodOperator(
         task_id="run_raw_to_parquet_hour",
@@ -96,7 +116,7 @@ def raw_to_parquet_dag():
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
-            requests={"memory": "1Gi", "cpu": "500m"},
+            requests={"memory": "1.5Gi", "cpu": "500m"},
             limits={"memory": "2Gi", "cpu": "1000m"},
         ),
     )
