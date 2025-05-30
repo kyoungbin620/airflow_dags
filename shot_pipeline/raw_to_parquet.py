@@ -89,7 +89,7 @@ def raw_to_parquet_dag():
     
     # Spark 로그 레벨 설정 추가
     arguments.extend([
-        "--conf", "spark.driver.extraJavaOptions=-Dlog4j.rootCategory=WARN,console",
+        "--conf", "spark.driver.extraJavaOptions=-Dlog4j.rootCategory=INFO,console",
         "--conf", "spark.executor.extraJavaOptions=-Dlog4j.rootCategory=WARN,console",
         "--conf", "spark.log.level=INFO"
     ])
