@@ -33,12 +33,23 @@ spark_configs = {
     # 성능 최적화
     "spark.sql.adaptive.enabled": "true",
     "spark.sql.adaptive.coalescePartitions.enabled": "true",
-    "spark.sql.shuffle.partitions": "100",
+    "spark.sql.shuffle.partitions": "10",
     "spark.memory.offHeap.enabled": "true",
     "spark.memory.offHeap.size": "512m",
     
+    # 파일 병합 설정
+    "spark.sql.files.maxRecordsPerFile": "1000000",
+    "spark.sql.files.maxPartitionBytes": "134217728",
+    
     # 동적 파티션 관리
     "spark.sql.sources.partitionOverwriteMode": "dynamic",
+    
+    # S3 Endpoint 설정
+    "spark.hadoop.fs.s3a.endpoint": "s3.us-west-2.amazonaws.com",
+    "spark.hadoop.fs.s3a.endpoint.region": "us-west-2",
+    "spark.hadoop.fs.s3a.access.style": "PathStyle",
+    "spark.hadoop.fs.s3a.path.style.access": "true",
+    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
     
     # Kubernetes 설정
     "spark.kubernetes.namespace": "airflow",
