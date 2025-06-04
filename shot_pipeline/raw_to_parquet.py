@@ -22,14 +22,14 @@ spark_configs = {
     "spark.driver.maxResultSize": "512m",
     "spark.executor.memory": "1g",
     "spark.executor.memoryOverhead": "512m",
-    
-    # Executor 설정 (코어 수 2개로 조정)
+
+    # Executor 설정 (코어 수 1개로 조정)
     "spark.dynamicAllocation.enabled": "true",
     "spark.dynamicAllocation.minExecutors": "1",
-    "spark.dynamicAllocation.maxExecutors": "2",
+    "spark.dynamicAllocation.maxExecutors": "1",
     "spark.dynamicAllocation.initialExecutors": "1",
-    "spark.executor.cores": "2",
-    
+    "spark.executor.cores": "1",
+
     # 성능 최적화
     "spark.sql.adaptive.enabled": "true",
     "spark.sql.adaptive.coalescePartitions.enabled": "true",
@@ -40,17 +40,17 @@ spark_configs = {
     "spark.default.parallelism": "4",
     "spark.sql.broadcastTimeout": "600",
     "spark.network.timeout": "800",
-    
+
     # 동적 파티션 관리
     "spark.sql.sources.partitionOverwriteMode": "dynamic",
-    
+
     # S3 Endpoint 설정
     "spark.hadoop.fs.s3a.endpoint": "s3.us-west-2.amazonaws.com",
     "spark.hadoop.fs.s3a.endpoint.region": "us-west-2",
     "spark.hadoop.fs.s3a.access.style": "PathStyle",
     "spark.hadoop.fs.s3a.path.style.access": "true",
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
-    
+
     # Kubernetes 설정
     "spark.kubernetes.namespace": "airflow",
     "spark.kubernetes.authenticate.driver.serviceAccountName": "airflow-irsa",
@@ -59,12 +59,16 @@ spark_configs = {
     "spark.kubernetes.container.image": spark_image,
     "spark.kubernetes.driver.container.image": spark_image,
     "spark.kubernetes.file.upload.path": "local:///opt/spark/tmp",
-    
+
     # 리소스 요청/제한 설정
     "spark.kubernetes.driver.request.cores": "1",
     "spark.kubernetes.driver.limit.cores": "2",
     "spark.kubernetes.executor.request.cores": "1",
     "spark.kubernetes.executor.limit.cores": "2",
+
+
+
+
 }
 
 @dag(
@@ -89,7 +93,7 @@ def raw_to_parquet_dag():
         import logging
         logging.info(f"[INPUT] start_date: {params['start_date']}")
         logging.info(f"[INPUT] end_date: {params['end_date']}")
-    
+
     log_params = log_inputs()
 
     # Spark 설정을 arguments로 변환
@@ -99,11 +103,11 @@ def raw_to_parquet_dag():
         "--deploy-mode", "cluster",
         "--name", dag_name,
     ]
-    
+
     # 설정을 arguments에 추가
     for key, value in spark_configs.items():
         arguments.extend(["--conf", f"{key}={value}"])
-    
+
     # Spark 로그 레벨 설정 추가
     # arguments.extend([
     #     # Driver와 Executor 모두 동일한 로그 레벨 적용
@@ -112,13 +116,13 @@ def raw_to_parquet_dag():
     #     # Spark 자체 로그 레벨 설정
     #     "--conf", "spark.log.level=INFO"
     # ])
-    
+
     # UI 프록시 라우팅 (동적 설정이라 별도 추가)
     arguments.extend([
         "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
         "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
     ])
-    
+
     # 애플리케이션 리소스
     arguments.extend([
         "--py-files", "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip",
