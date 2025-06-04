@@ -143,8 +143,8 @@ def raw_to_parquet_dag():
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
-            requests={"memory": "3Gi", "cpu": "2"},
-            limits={"memory": "4Gi", "cpu": "4"},
+            requests={"memory": "1.5Gi", "cpu": "500m"},
+            limits={"memory": "2Gi", "cpu": "1000m"},
         ),
     )
 
