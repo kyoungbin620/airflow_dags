@@ -17,29 +17,29 @@ default_args = {
 
 # Spark 설정 중앙 관리
 spark_configs = {
-    # 메모리 관리 (노드 상황 고려)
+    # 메모리 관리 (노드 상황 고려 - 기존 설정 유지)
     "spark.driver.memory": "1g",
     "spark.driver.maxResultSize": "512m",
     "spark.executor.memory": "1g",
     "spark.executor.memoryOverhead": "512m",
     
-    # Executor 설정
+    # Executor 설정 (executor 수는 유지하고 코어 수만 증가)
     "spark.dynamicAllocation.enabled": "true",
     "spark.dynamicAllocation.minExecutors": "1",
     "spark.dynamicAllocation.maxExecutors": "2",
     "spark.dynamicAllocation.initialExecutors": "1",
-    "spark.executor.cores": "1",
+    "spark.executor.cores": "4",
     
     # 성능 최적화
     "spark.sql.adaptive.enabled": "true",
     "spark.sql.adaptive.coalescePartitions.enabled": "true",
-    "spark.sql.shuffle.partitions": "10",
+    "spark.sql.shuffle.partitions": "20",
     "spark.memory.offHeap.enabled": "true",
     "spark.memory.offHeap.size": "512m",
-    
-    # 파일 병합 설정
-    "spark.sql.files.maxRecordsPerFile": "1000000",
     "spark.sql.files.maxPartitionBytes": "134217728",
+    "spark.default.parallelism": "8",
+    "spark.sql.broadcastTimeout": "600",
+    "spark.network.timeout": "800",
     
     # 동적 파티션 관리
     "spark.sql.sources.partitionOverwriteMode": "dynamic",
@@ -59,6 +59,12 @@ spark_configs = {
     "spark.kubernetes.container.image": spark_image,
     "spark.kubernetes.driver.container.image": spark_image,
     "spark.kubernetes.file.upload.path": "local:///opt/spark/tmp",
+    
+    # 리소스 요청/제한 설정 (CPU만 증가)
+    "spark.kubernetes.driver.request.cores": "1",
+    "spark.kubernetes.driver.limit.cores": "2",
+    "spark.kubernetes.executor.request.cores": "2",
+    "spark.kubernetes.executor.limit.cores": "4",
 }
 
 @dag(
