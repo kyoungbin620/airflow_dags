@@ -17,25 +17,25 @@ default_args = {
 
 # Spark 설정 중앙 관리
 spark_configs = {
-    # 메모리 관리 (노드 상황 고려 - 기존 설정 유지)
-    "spark.driver.memory": "1g",
-    "spark.driver.maxResultSize": "512m",
-    "spark.executor.memory": "1g",
-    "spark.executor.memoryOverhead": "512m",
+    # 메모리 관리
+    "spark.driver.memory": "2g",
+    "spark.driver.maxResultSize": "1g",
+    "spark.executor.memory": "2g",
+    "spark.executor.memoryOverhead": "1g",
     
-    # Executor 설정 (executor 수는 유지하고 코어 수만 증가)
+    # Executor 설정
     "spark.dynamicAllocation.enabled": "true",
     "spark.dynamicAllocation.minExecutors": "1",
     "spark.dynamicAllocation.maxExecutors": "2",
     "spark.dynamicAllocation.initialExecutors": "1",
-    "spark.executor.cores": "4",
+    "spark.executor.cores": "2",
     
     # 성능 최적화
     "spark.sql.adaptive.enabled": "true",
     "spark.sql.adaptive.coalescePartitions.enabled": "true",
     "spark.sql.shuffle.partitions": "20",
     "spark.memory.offHeap.enabled": "true",
-    "spark.memory.offHeap.size": "512m",
+    "spark.memory.offHeap.size": "1g",
     "spark.sql.files.maxPartitionBytes": "134217728",
     "spark.default.parallelism": "8",
     "spark.sql.broadcastTimeout": "600",
@@ -60,11 +60,15 @@ spark_configs = {
     "spark.kubernetes.driver.container.image": spark_image,
     "spark.kubernetes.file.upload.path": "local:///opt/spark/tmp",
     
-    # 리소스 요청/제한 설정 (CPU만 증가)
-    "spark.kubernetes.driver.request.cores": "1",
-    "spark.kubernetes.driver.limit.cores": "2",
+    # Kubernetes 리소스 설정
+    "spark.kubernetes.driver.request.cores": "2",
+    "spark.kubernetes.driver.limit.cores": "4",
     "spark.kubernetes.executor.request.cores": "2",
     "spark.kubernetes.executor.limit.cores": "4",
+    "spark.kubernetes.executor.request.memory": "3g",
+    "spark.kubernetes.executor.limit.memory": "4g",
+    "spark.kubernetes.driver.request.memory": "3g",
+    "spark.kubernetes.driver.limit.memory": "4g",
 }
 
 @dag(
@@ -139,8 +143,8 @@ def raw_to_parquet_dag():
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
-            requests={"memory": "1.5Gi", "cpu": "500m"},
-            limits={"memory": "2Gi", "cpu": "1000m"},
+            requests={"memory": "3Gi", "cpu": "2"},
+            limits={"memory": "4Gi", "cpu": "4"},
         ),
     )
 
