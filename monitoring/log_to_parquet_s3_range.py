@@ -28,7 +28,7 @@ spark_configs = {
     "spark.dynamicAllocation.minExecutors": "1",
     "spark.dynamicAllocation.maxExecutors": "1",
     "spark.dynamicAllocation.initialExecutors": "1",
-    "spark.executor.cores": "4",
+    "spark.executor.cores": "1",
 
     # 성능 최적화
     "spark.sql.adaptive.enabled": "true",
@@ -37,7 +37,7 @@ spark_configs = {
     "spark.memory.offHeap.enabled": "true",
     "spark.memory.offHeap.size": "512m",
     "spark.sql.files.maxPartitionBytes": "134217728",
-    "spark.default.parallelism": "8",
+    "spark.default.parallelism": "1",
     "spark.sql.broadcastTimeout": "600",
     "spark.network.timeout": "800",
 

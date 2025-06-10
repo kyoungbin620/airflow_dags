@@ -35,7 +35,7 @@ spark_configs = {
     "spark.memory.offHeap.enabled": "true",
     "spark.memory.offHeap.size": "512m",
     "spark.sql.files.maxPartitionBytes": "134217728",
-    "spark.default.parallelism": "8",
+    "spark.default.parallelism": "1",
     "spark.sql.broadcastTimeout": "600",
     "spark.network.timeout": "800",
     # 동적 파티션 덮어쓰기 모드
