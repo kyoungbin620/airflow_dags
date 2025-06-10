@@ -5,7 +5,7 @@ from datetime import timedelta
 from airflow.models.param import Param
 from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
 
-dag_name = "run_raw_to_parquet_daily"
+dag_name = "raw_to_parquet_range"
 spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
 api_server = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
@@ -50,12 +50,12 @@ spark_configs = {
     "spark.hadoop.fs.s3a.access.style": "PathStyle",
     "spark.hadoop.fs.s3a.path.style.access": "true",
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
 
     # Kubernetes 설정
     "spark.kubernetes.namespace": "airflow",
     "spark.kubernetes.authenticate.driver.serviceAccountName": "airflow-irsa",
     "spark.kubernetes.container.image.pullSecrets": "ecr-pull-secret",
-    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
     "spark.kubernetes.container.image": spark_image,
     "spark.kubernetes.driver.container.image": spark_image,
     "spark.kubernetes.file.upload.path": "local:///opt/spark/tmp",
@@ -65,9 +65,6 @@ spark_configs = {
     "spark.kubernetes.driver.limit.cores": "2",
     "spark.kubernetes.executor.request.cores": "1",
     "spark.kubernetes.executor.limit.cores": "2",
-
-
-
 
 }
 
@@ -108,14 +105,6 @@ def raw_to_parquet_dag():
     for key, value in spark_configs.items():
         arguments.extend(["--conf", f"{key}={value}"])
 
-    # Spark 로그 레벨 설정 추가
-    # arguments.extend([
-    #     # Driver와 Executor 모두 동일한 로그 레벨 적용
-    #     "--conf", "spark.driver.extraJavaOptions=-Dlog4j.rootCategory=INFO,console -Dlog4j.appender.console=org.apache.log4j.ConsoleAppender -Dlog4j.appender.console.layout=org.apache.log4j.PatternLayout \"-Dlog4j.appender.console.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %p %c{1}: %m%n\"",
-    #     "--conf", "spark.executor.extraJavaOptions=-Dlog4j.rootCategory=INFO,console -Dlog4j.appender.console=org.apache.log4j.ConsoleAppender -Dlog4j.appender.console.layout=org.apache.log4j.PatternLayout \"-Dlog4j.appender.console.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %p %c{1}: %m%n\"",
-    #     # Spark 자체 로그 레벨 설정
-    #     "--conf", "spark.log.level=INFO"
-    # ])
 
     # UI 프록시 라우팅 (동적 설정이라 별도 추가)
     arguments.extend([

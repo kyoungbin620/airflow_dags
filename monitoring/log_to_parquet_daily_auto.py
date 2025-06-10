@@ -65,34 +65,37 @@ spark_configs = {
     "spark.kubernetes.executor.request.cores": "2",
     "spark.kubernetes.executor.limit.cores": "4",
 }
-
 with DAG(
     dag_id=dag_name,
     default_args=default_args,
-    start_date=datetime(2025, 5, 28),
-    schedule_interval="0 2 * * *",  # 매일 2시
+    # 1) UTC 기준 매일 02:00 실행
+    schedule_interval="0 2 * * *",
+    # 2) 최초 시작일은 고정된 과거(예: 2025-05-28 UTC)
+    start_date=pendulum.datetime(2025, 5, 28, 0, 0, tz="UTC"),
     catchup=False,
     tags=["spark", "s3", "parquet"],
 ) as dag:
 
     @task()
     def run_spark_job(**context):
-        from datetime import datetime, timedelta
+        # Airflow 매크로 ds는 '실행일 기준 YYYY-MM-DD' 문자열
+        ds = context["ds"]  # ex. "2025-06-10"
+        # 전날 날짜 계산
+        prev_date = (
+            datetime.strptime(ds, "%Y-%m-%d") - timedelta(days=1)
+        ).strftime("%Y-%m-%d")
 
-        execution_date = datetime.strptime(context["ds"], "%Y-%m-%d")
-        prev_date_str = (execution_date - timedelta(days=1)).strftime("%Y-%m-%d")
-
-        # spark_configs → --conf로 변환
+        # spark_configs → --conf 리스트로 변환
         spark_conf_args = []
         for key, value in spark_configs.items():
-            spark_conf_args.extend(["--conf", f"{key}={value}"])
+            spark_conf_args += ["--conf", f"{key}={value}"]
 
-        # UI proxy 관련 추가 conf
-        spark_conf_args.extend([
+        # UI 프록시 관련 설정 추가
+        spark_conf_args += [
             "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
             "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
             "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
-        ])
+        ]
 
         return KubernetesPodOperator(
             task_id="run_spark_submit_s3_script_daily",
@@ -106,8 +109,8 @@ with DAG(
                 "--name", dag_name,
                 *spark_conf_args,
                 "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily_v1.0.0.py",
-                "--start-date", prev_date_str,
-                "--end-date", prev_date_str,
+                "--start-date", prev_date,
+                "--end-date",   prev_date,
             ],
             get_logs=True,
             is_delete_operator_pod=True,
@@ -117,7 +120,7 @@ with DAG(
                 requests={"memory": "1Gi", "cpu": "500m"},
                 limits={"memory": "2Gi", "cpu": "1000m"},
             ),
-            dag=dag,
         ).execute(context=context)
 
+    # 태스크 등록
     run_spark_job()
