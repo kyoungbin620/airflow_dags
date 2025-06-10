@@ -25,9 +25,9 @@ spark_configs = {
     # Executor 설정
     "spark.dynamicAllocation.enabled": "true",
     "spark.dynamicAllocation.minExecutors": "1",
-    "spark.dynamicAllocation.maxExecutors": "2",
+    "spark.dynamicAllocation.maxExecutors": "1",
     "spark.dynamicAllocation.initialExecutors": "1",
-    "spark.executor.cores": "4",
+    "spark.executor.cores": "1",
     # 성능 최적화
     "spark.sql.adaptive.enabled": "true",
     "spark.sql.adaptive.coalescePartitions.enabled": "true",
@@ -57,8 +57,8 @@ spark_configs = {
     # 리소스 요청·제한
     "spark.kubernetes.driver.request.cores": "1",
     "spark.kubernetes.driver.limit.cores":   "2",
-    "spark.kubernetes.executor.request.cores": "2",
-    "spark.kubernetes.executor.limit.cores":   "4",
+    "spark.kubernetes.executor.request.cores": "1",
+    "spark.kubernetes.executor.limit.cores":   "2",
 }
 
 with DAG(
