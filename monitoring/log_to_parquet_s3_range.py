@@ -33,7 +33,7 @@ spark_configs = {
     # 성능 최적화
     "spark.sql.adaptive.enabled": "true",
     "spark.sql.adaptive.coalescePartitions.enabled": "true",
-    "spark.sql.shuffle.partitions": "20",
+    "spark.sql.shuffle.partitions": "1",
     "spark.memory.offHeap.enabled": "true",
     "spark.memory.offHeap.size": "512m",
     "spark.sql.files.maxPartitionBytes": "134217728",
