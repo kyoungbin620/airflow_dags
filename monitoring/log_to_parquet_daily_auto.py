@@ -65,7 +65,7 @@ with DAG(
     dag_id=dag_name,
     default_args=default_args,
     # 매일 UTC 02:00 실행
-    schedule_interval="0 2 * * *",
+    schedule_interval="0 1 * * *",
     # 고정된 UTC 과거 시작일 (pendulum 불필요)
     start_date=datetime(2025, 5, 28),
     catchup=False,
