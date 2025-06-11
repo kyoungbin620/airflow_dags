@@ -57,7 +57,7 @@ spark_configs = {
 @dag(
     dag_id=dag_name,
     default_args=default_args,
-    schedule_interval="0 17 * * *",  # UTC 기준 매일 17시에 실행
+    schedule_interval="0 17 * * *",  # UTC 기준 매일 17시에 실 행
     start_date=days_ago(1),
     catchup=False,
     tags=["spark", "s3", "parquet"],
