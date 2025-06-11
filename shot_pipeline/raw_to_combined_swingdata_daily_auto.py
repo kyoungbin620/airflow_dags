@@ -133,4 +133,80 @@ def build_spark_args(
 @dag(
     dag_id=DAG_NAME,
     default_args=DEFAULT_ARGS,
-        schedule_interval="0 17 * * *",  # 매일 02:00 KST (17:00 UTC 전날)에 실행
+    schedule_interval="0 17 * * *",  # 매일 02:00 KST(17:00 UTC 전날)에 실행
+    start_date=days_ago(1),
+    catchup=False,
+    tags=["spark", "parquet", "s3"],
+)
+def combined_spark_pipeline():
+    """
+    Airflow DAG 정의:
+    1단계: raw 데이터를 base Parquet으로 변환
+    2단계: shotinfo 및 swingtrace JSON 필드 추출
+    """
+
+    @task()
+    def log_execution_date(execution_date=None):
+        """
+        실행 날짜(UTC 기준) 로그
+        """
+        logging.info(f"실행 날짜: {execution_date}")
+
+    # 실행 날짜 로깅
+    log_task = log_execution_date()
+
+    # Step 1: Raw -> Base Parquet 변환 (실행 시점 기준 이틀 전 데이터)
+    base_spark_args = build_spark_args(
+        name_suffix="base",
+        script_path="s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
+        start_date="{{ macros.ds_add(ds, -1) }}",
+        end_date="{{ macros.ds_add(ds, -1) }}",
+    )
+
+    raw_to_base = KubernetesPodOperator(
+        task_id="run_raw_to_parquet",
+        name="raw-to-parquet",
+        namespace="airflow",
+        image=SPARK_IMAGE,
+        cmds=["/opt/spark/bin/spark-submit"],
+        arguments=base_spark_args,
+        get_logs=True,
+        is_delete_operator_pod=False,
+        service_account_name="airflow-irsa",
+        image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
+        container_resources=V1ResourceRequirements(
+            requests={"memory": "1.5Gi", "cpu": "500m"},
+            limits={"memory": "2Gi", "cpu": "1000m"},
+        ),
+    )
+
+    # Step 2: Base -> 통합 JSON 추출 (실행 시점 기준 이틀 전 데이터)
+    combined_spark_args = build_spark_args(
+        name_suffix="combined",
+        script_path="s3a://creatz-airflow-jobs/monitoring/scripts/run_combined_json_extract.py",
+        start_date="{{ macros.ds_add(ds, -1) }}",
+        end_date="{{ macros.ds_add(ds, -1) }}",
+    )
+
+    extract_to_combined = KubernetesPodOperator(
+        task_id="run_combined_extract",
+        name="parquet-to-combined",
+        namespace="airflow",
+        image=SPARK_IMAGE,
+        cmds=["/opt/spark/bin/spark-submit"],
+        arguments=combined_spark_args,
+        get_logs=True,
+        is_delete_operator_pod=False,
+        service_account_name="airflow-irsa",
+        image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
+        container_resources=V1ResourceRequirements(
+            requests={"memory": "1.5Gi", "cpu": "500m"},
+            limits={"memory": "2Gi", "cpu": "1000m"},
+        ),
+    )
+
+    # 태스크 의존성 정의
+    log_task >> raw_to_base >> extract_to_combined
+
+
+dag_instance = combined_spark_pipeline()
