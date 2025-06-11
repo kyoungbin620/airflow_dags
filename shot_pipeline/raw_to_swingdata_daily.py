@@ -1,7 +1,7 @@
 from airflow.decorators import dag, task
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.utils.dates import days_ago
-from datetime import timedelta
+from datetime import datetime, timedelta
 from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
 
 # === 공통 설정 ===
