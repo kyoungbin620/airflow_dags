@@ -33,11 +33,14 @@ spark_configs = {
     "spark.sql.adaptive.enabled": "true",
     "spark.sql.adaptive.coalescePartitions.enabled": "true",
     "spark.sql.shuffle.partitions": "20",
+    "spark.memory.offHeap.enabled": "true",
+    "spark.memory.offHeap.size": "512m",
+    "spark.sql.files.maxPartitionBytes": "134217728",
     "spark.default.parallelism": "4",
     "spark.sql.broadcastTimeout": "600",
     "spark.network.timeout": "800",
-    "spark.memory.offHeap.enabled": "true",
-    "spark.memory.offHeap.size": "512m",
+
+    # 동적 파티션 관리
     "spark.sql.sources.partitionOverwriteMode": "dynamic",
 
     # S3
@@ -102,7 +105,7 @@ def raw_to_parquet_dag():
 
     spark_submit = KubernetesPodOperator(
         task_id="run_raw_to_parquet_range",
-        name="raw-to-parquet-pipeline",
+        name="base-to-shotinfo_ai-pipeline",
         namespace="airflow",
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
@@ -115,10 +118,6 @@ def raw_to_parquet_dag():
             requests={"memory": "1.5Gi", "cpu": "500m"},
             limits={"memory": "2Gi", "cpu": "1000m"},
         ),
-        env_vars={
-            "AWS_WEB_IDENTITY_TOKEN_FILE": "/var/run/secrets/eks.amazonaws.com/serviceaccount/token",
-            "AWS_REGION": "us-west-2",
-        },
     )
 
     log_task >> spark_submit
