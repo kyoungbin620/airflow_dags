@@ -3,6 +3,7 @@ from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import Kubernete
 from airflow.utils.dates import days_ago
 from datetime import datetime, timedelta
 from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
+import logging
 
 # === 공통 설정 ===
 dag_name = "raw_to_swingdata_daily"
@@ -70,16 +71,11 @@ def raw_to_swingdata_range_dag():
         prev_date = (
             datetime.strptime(ds, "%Y-%m-%d") - timedelta(days=1)
         ).strftime("%Y-%m-%d")
+        logging.info(f"[PROCESS DATE] {prev_date}")
+
         return prev_date
 
     run_date = get_run_date()
-
-    @task()
-    def log_date(run_date: str):
-        import logging
-        logging.info(f"[PROCESS DATE] {run_date}")
-
-    log_task = log_date(run_date)
 
     # Spark 공통 conf -> arguments 변환
     common_conf = []
@@ -137,6 +133,6 @@ def raw_to_swingdata_range_dag():
         ),
     )
 
-    run_date >> log_task >> raw_task >> base_task
+    run_date >> raw_task >> base_task
 
 dag = raw_to_swingdata_range_dag()
