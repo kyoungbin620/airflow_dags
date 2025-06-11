@@ -14,6 +14,7 @@ default_args = {
     "owner": "airflow",
     "retries": 1,
     "retry_delay": timedelta(minutes=3),
+    "start_date": datetime(2025, 6, 10, 17, 0),
 }
 
 # Spark 파라미터 맵 (기존 설정 그대로 사용)
@@ -71,8 +72,8 @@ spark_configs = {
 @dag(
     dag_id=dag_name,
     default_args=default_args,
-    # 매일 UTC 02:00에 실행
-    schedule_interval="0 2 * * *",
+    # 매일 KST 02:00에 실행
+    schedule_interval="0 17 * * *",
     # 과거 태스크는 건너뜀
     catchup=False,
     # 시작일을 고정된 과거 날짜로 설정
@@ -86,36 +87,38 @@ def raw_to_parquet_dag():
         import logging
         logging.info(f"[INPUT] 처리 대상 날짜: {run_date}")
 
-    # 기존의 log_inputs() 호출을 아래 한 줄로 바꿉니다.
-    log_params = log_inputs(run_date="{{ ds }}")
+    # ───────────────────────────────────────────────────────
+    # 실행일(ds)이 2025-06-11 이면,
+    # macros.ds_add(ds, -2) → "2025-06-09"
+    run_date = "{{ macros.ds_add(ds, -2) }}"
+    # ───────────────────────────────────────────────────────
 
-    # spark-submit 기본 인자
+    # ① 로그 태스크
+    log_params = log_inputs(run_date=run_date)
+
+    # ② spark-submit arguments
     arguments = [
         "--master", api_server,
         "--deploy-mode", "cluster",
         "--name", dag_name,
     ]
+    for k, v in spark_configs.items():
+        arguments += ["--conf", f"{k}={v}"]
 
-    # spark_configs 를 --conf 형식으로 추가
-    for key, value in spark_configs.items():
-        arguments += ["--conf", f"{key}={value}"]
-
-    # Spark UI 프록시 설정
+    # UI proxy 설정
     arguments += [
         "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
         "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
     ]
 
-    # 파이썬 애플리케이션 경로와 날짜 매크로
+    # 애플리케이션 + 2일 전 날짜 인자
     arguments += [
         "--py-files", "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip",
         "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
-        # Airflow 매크로 ds 는 “실행 기준일 전날”을 가리킵니다
-        "--start-date", "{{ ds }}",
-        "--end-date",   "{{ ds }}",
+        "--start-date", run_date,
+        "--end-date",   run_date,
     ]
 
-    # KubernetesPodOperator 정의
     spark_submit = KubernetesPodOperator(
         task_id="run_raw_to_parquet_daily",
         name="raw-to-parquet-pipeline",
@@ -133,8 +136,8 @@ def raw_to_parquet_dag():
         ),
     )
 
-    # 로그 로깅 후 Spark 제출
+    # ③ 워크플로우 연결
     log_params >> spark_submit
 
 # DAG 인스턴스 생성
-dag_instance = raw_to_parquet_dag()
+dag = raw_to_parquet_dag()
