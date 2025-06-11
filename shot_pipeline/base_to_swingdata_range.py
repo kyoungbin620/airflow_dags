@@ -105,7 +105,7 @@ def raw_to_parquet_dag():
 
     spark_submit = KubernetesPodOperator(
         task_id="run_raw_to_parquet_range",
-        name="base-to-shotinfo_ai-pipeline",
+        name="base-to-swingdata-pipeline",
         namespace="airflow",
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
