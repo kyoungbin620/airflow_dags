@@ -5,7 +5,7 @@ from datetime import timedelta
 from airflow.models.param import Param
 from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
 
-dag_name = "raw_to_parquet_range"
+dag_name = "raw_to_base_range"
 spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
 api_server = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
