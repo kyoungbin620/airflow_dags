@@ -133,17 +133,9 @@ def build_spark_args(
 @dag(
     dag_id=DAG_NAME,
     default_args=DEFAULT_ARGS,
-    schedule_interval="0 17 * * *"  # 매일 02:00 KST (17:00 UTC 전날)에 실행,
+    schedule_interval="0 17 * * *",  # 매일 02:00 KST (17:00 UTC 전날)에 실행
     start_date=days_ago(1),
     catchup=False,
-    params={
-        "start_date": Param(
-            default="2025-05-01", type="string", format="%Y-%m-%d"
-        ),
-        "end_date": Param(
-            default="2025-05-02", type="string", format="%Y-%m-%d"
-        ),
-    },
     tags=["spark", "parquet", "s3"],
 )
 def combined_spark_pipeline():
@@ -154,24 +146,21 @@ def combined_spark_pipeline():
     """
 
     @task()
-    def log_parameters(start_date: str, end_date: str):
+    def log_parameters(execution_date: str):
         """
-        시작 및 종료 날짜 파라미터 로깅
+        실행 날짜 로깅 (데이터 처리일 기준)
         """
-        logging.info(f"시작 날짜: {start_date}")
-        logging.info(f"종료 날짜: {end_date}")
+        logging.info(f"실행 날짜(UTC): {execution_date}")
 
-    # 파라미터 로깅 태스크
-    log_task = log_parameters(
-        "{{ params.start_date }}", "{{ params.end_date }}"
-    )
+    # 로그 파라미터 태스크
+    log_task = log_parameters("")  # execution_date는 매크로로 자동 삽입 가능
 
-    # Step 1: Raw -> Base Parquet 변환
+    # Step 1: Raw -> Base Parquet 변환 (이틀 전 데이터)
     base_spark_args = build_spark_args(
         name_suffix="base",
         script_path="s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
-        start_date="{{ macros.ds_add(ds, -1) }}", # 실행 시점 기준 전날(실제 처리일 기준 이틀 전),
-        end_date="{{ macros.ds_add(ds, -1) }}",
+        start_date="{{ macros.ds_add(ds, -2) }}",  # 실행 시점 기준 이틀 전
+        end_date="{{ macros.ds_add(ds, -2) }}",    # 실행 시점 기준 이틀 전
     )
 
     raw_to_base = KubernetesPodOperator(
@@ -191,12 +180,12 @@ def combined_spark_pipeline():
         ),
     )
 
-    # Step 2: Base -> 통합 JSON 추출
+    # Step 2: Base -> 통합 JSON 추출 (이틀 전 데이터)
     combined_spark_args = build_spark_args(
         name_suffix="combined",
         script_path="s3a://creatz-airflow-jobs/monitoring/scripts/run_combined_json_extract.py",
-        start_date="{{ macros.ds_add(ds, -1) }}",
-        end_date="{{ macros.ds_add(ds, -1) }}",
+        start_date="{{ macros.ds_add(ds, -2) }}",  # 실행 시점 기준 이틀 전
+        end_date="{{ macros.ds_add(ds, -2) }}",    # 실행 시점 기준 이틀 전
     )
 
     extract_to_combined = KubernetesPodOperator(
