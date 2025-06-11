@@ -63,13 +63,22 @@ spark_configs = {
     tags=["spark", "s3", "parquet"],
 )
 def raw_to_swingdata_range_dag():
+
+    @task()
+    def get_run_date(**context):
+        ds = context["ds"]
+        prev_date = (
+            datetime.strptime(ds, "%Y-%m-%d") - timedelta(days=1)
+        ).strftime("%Y-%m-%d")
+        return prev_date
+
+    run_date = get_run_date()
+
     @task()
     def log_date(run_date: str):
         import logging
         logging.info(f"[PROCESS DATE] {run_date}")
 
-    # 처리할 날짜: UTC 기준 하루 전
-    run_date = "{{ prev_ds }}"
     log_task = log_date(run_date)
 
     # Spark 공통 conf -> arguments 변환
@@ -81,24 +90,26 @@ def raw_to_swingdata_range_dag():
         "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
     ]
 
-    # 1) Raw -> Base 처리
-    raw_args = [
-        "--master", api_server,
-        "--deploy-mode", "cluster",
-        "--name", f"{dag_name}-raw",
-        *common_conf,
-        "--py-files", "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip",
-        "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
-        "--start-date", run_date,
-        "--end-date", run_date,
-    ]
+    # Raw -> Base 처리
+    def make_args(script_path, run_date_str):
+        return [
+            "--master", api_server,
+            "--deploy-mode", "cluster",
+            "--name", f"{dag_name}-raw" if "raw" in script_path else f"{dag_name}-base",
+            *common_conf,
+            "--py-files", "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip" if "raw" in script_path else None,
+            script_path,
+            "--start-date", run_date_str,
+            "--end-date", run_date_str,
+        ]
+
     raw_task = KubernetesPodOperator(
         task_id="run_raw_to_base_range",
         name="raw-to-base-pipeline",
         namespace="airflow",
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
-        arguments=raw_args,
+        arguments=make_args("s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py", "{{ ti.xcom_pull(task_ids='get_run_date') }}"),
         get_logs=True,
         is_delete_operator_pod=False,
         service_account_name="airflow-irsa",
@@ -109,23 +120,13 @@ def raw_to_swingdata_range_dag():
         ),
     )
 
-    # 2) Base -> SwingData 처리
-    base_args = [
-        "--master", api_server,
-        "--deploy-mode", "cluster",
-        "--name", f"{dag_name}-base",
-        *common_conf,
-        "s3a://creatz-airflow-jobs/monitoring/scripts/run_swingdata_extract_pipeline_v1.0.0.py",
-        "--start-date", run_date,
-        "--end-date", run_date,
-    ]
     base_task = KubernetesPodOperator(
         task_id="run_base_to_swingdata_range",
         name="base-to-swingdata-pipeline",
         namespace="airflow",
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
-        arguments=base_args,
+        arguments=make_args("s3a://creatz-airflow-jobs/monitoring/scripts/run_swingdata_extract_pipeline_v1.0.0.py", "{{ ti.xcom_pull(task_ids='get_run_date') }}"),
         get_logs=True,
         is_delete_operator_pod=False,
         service_account_name="airflow-irsa",
@@ -136,8 +137,6 @@ def raw_to_swingdata_range_dag():
         ),
     )
 
-    # 순차적 실행
-    log_task >> raw_task >> base_task
+    get_run_date() >> log_task >> raw_task >> base_task
 
-# DAG 인스턴스화
 dag = raw_to_swingdata_range_dag()
