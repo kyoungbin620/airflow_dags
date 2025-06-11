@@ -5,7 +5,7 @@ from datetime import timedelta
 from airflow.models.param import Param
 from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
 
-dag_name = "base_to_shot_ai_range"
+dag_name = "base_to_swingdata_range"
 spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
 api_server = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
@@ -98,7 +98,7 @@ def raw_to_parquet_dag():
     arguments += [
         "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
         "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
-        "s3a://creatz-airflow-jobs/monitoring/scripts/run_shotinfo_ai_extract_pipeline_v1.0.0.py",
+        "s3a://creatz-airflow-jobs/monitoring/scripts/run_swingdata_extract_pipeline_v1.0.0.py",
         "--start-date", "{{ params.start_date }}",
         "--end-date", "{{ params.end_date }}",
     ]
