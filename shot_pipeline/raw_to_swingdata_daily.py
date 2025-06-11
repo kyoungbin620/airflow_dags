@@ -137,6 +137,6 @@ def raw_to_swingdata_range_dag():
         ),
     )
 
-    get_run_date() >> log_task >> raw_task >> base_task
+    run_date >> log_task >> raw_task >> base_task
 
 dag = raw_to_swingdata_range_dag()
