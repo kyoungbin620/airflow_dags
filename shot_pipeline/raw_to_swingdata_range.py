@@ -132,7 +132,7 @@ def raw_to_swingdata_range_dag():
         cmds=["/opt/spark/bin/spark-submit"],
         arguments=base_args,
         get_logs=True,
-        is_delete_operator_pod=False,
+        is_delete_operator_pod=True,
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
