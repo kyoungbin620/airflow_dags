@@ -27,10 +27,11 @@ spark_configs = {
     # ─────────────────────────────
     # 실행자 (Executor) 설정
     # ─────────────────────────────
-    "spark.executor.memory": "2g",                          # Executor 메모리
-    "spark.executor.memoryOverhead": "1g",                  # JVM 외 메모리 오버헤드 (압축 해제시 필요)
+    "spark.executor.cores": "1",                            # Executor 하나당 사용할 CPU 수
+    "spark.executor.memory": "1.5g",                          # Executor 메모리
+    "spark.executor.memoryOverhead": "512m",                  # JVM 외 메모리 오버헤드 (압축 해제시 필요)
 
-    "spark.executor.cores": "2",                            # Executor 하나당 사용할 CPU 수
+    
     "spark.dynamicAllocation.enabled": "true",              # Executor 수 자동 조정 활성화
     "spark.dynamicAllocation.minExecutors": "4",            # 최소 Executor 수
     "spark.dynamicAllocation.initialExecutors": "8",        # 초기 Executor 수
@@ -40,9 +41,9 @@ spark_configs = {
     # 리소스 요청/제한 (Kubernetes 스케줄링용)
     # ─────────────────────────────
     "spark.kubernetes.driver.request.cores": "1",           # 드라이버가 요청하는 CPU
-    "spark.kubernetes.driver.limit.cores": "2",             # 드라이버 최대 사용 CPU
-    "spark.kubernetes.executor.request.cores": "2",         # Executor가 요청하는 CPU
-    "spark.kubernetes.executor.limit.cores": "2",           # Executor 최대 사용 CPU
+    "spark.kubernetes.driver.limit.cores": "1",             # 드라이버 최대 사용 CPU
+    "spark.kubernetes.executor.request.cores": "1",         # Executor가 요청하는 CPU
+    "spark.kubernetes.executor.limit.cores": "1",           # Executor 최대 사용 CPU
 
     # ─────────────────────────────
     # 쿼리 성능 최적화
@@ -90,7 +91,6 @@ spark_configs = {
     # 노드 선택 및 배치 제어
     # ─────────────────────────────
     "spark.kubernetes.executor.node.selector.intent": "spark",       # 노드 선택자 (NodePool과 연결)
-#    "spark.kubernetes.executor.tolerations": '[{"key":"workload","operator":"Equal","value":"spark","effect":"NoSchedule"}]',
 }
 
 @dag(
