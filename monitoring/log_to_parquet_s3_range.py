@@ -65,6 +65,7 @@ spark_configs = {
     "spark.kubernetes.driver.limit.cores": "2",
     "spark.kubernetes.executor.request.cores": "1",
     "spark.kubernetes.executor.limit.cores": "2",
+    "spark.kubernetes.executor.node.selector.intent": "spark",
 }
 
 @dag(
@@ -98,6 +99,7 @@ def log_to_parquet_dag():
         namespace="airflow",
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
+        node_selector={"intent": "spark"},
         arguments=[
             "--master", api_server,
             "--deploy-mode", "cluster",
