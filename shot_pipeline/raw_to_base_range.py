@@ -126,6 +126,7 @@ def raw_to_parquet_dag():
         namespace="airflow",
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
+        node_selector={"intent": "spark"},
         arguments=arguments,
         get_logs=True,
         is_delete_operator_pod=False,
