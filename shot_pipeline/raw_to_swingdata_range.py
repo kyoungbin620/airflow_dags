@@ -90,6 +90,9 @@ spark_configs = {
     # 노드 선택 및 배치 제어
     # ─────────────────────────────
     "spark.kubernetes.executor.node.selector.intent": "spark",       # 노드 선택자 (NodePool과 연결)
+    "spark.kubernetes.executor.tolerations[0].key": "workload",
+    "spark.kubernetes.executor.tolerations[0].value": "spark",
+    "spark.kubernetes.executor.tolerations[0].effect": "NoSchedule",
 }
 
 @dag(
