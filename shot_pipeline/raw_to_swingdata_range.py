@@ -55,7 +55,8 @@ spark_configs = {
     "spark.sql.shuffle.partitions": "8",                   # 셔플 파티션 수 (적절한 병렬성 확보)
     "spark.default.parallelism": "8",                      # 기본 병렬 작업 수
     "spark.sql.files.maxPartitionBytes": "134217728",       # 파일 파티션 크기 (128MB)
-
+    "spark.sql.adaptive.coalescePartitions.minPartitionNum": "5",
+    "spark.sql.adaptive.coalescePartitions.minPartitionSize": str(200 * 1024 * 1024),  # 200MiB 이상은 분리 유지
     # ─────────────────────────────
     # 네트워크/메모리 안정성
     # ─────────────────────────────
