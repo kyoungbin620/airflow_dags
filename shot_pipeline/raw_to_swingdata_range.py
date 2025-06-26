@@ -21,21 +21,23 @@ spark_configs = {
     # ─────────────────────────────
     # 드라이버 설정
     # ─────────────────────────────
-    "spark.driver.memory": "2g",                            # 드라이버 메모리
-    "spark.driver.maxResultSize": "1g",                    # 드라이버가 수집할 수 있는 최대 결과 크기
+    "spark.driver.cores": "1",
+    "spark.driver.memory": "6g",
+    "spark.driver.memoryOverhead": "512m",
+    "spark.driver.maxResultSize": "1g",
 
     # ─────────────────────────────
     # 실행자 (Executor) 설정
     # ─────────────────────────────
     "spark.executor.cores": "1",                            # Executor 하나당 사용할 CPU 수
-    "spark.executor.memory": "1g",                          # Executor 메모리
+    "spark.executor.memory": "2g",                          # Executor 메모리
     "spark.executor.memoryOverhead": "512m",                  # JVM 외 메모리 오버헤드 (압축 해제시 필요)
 
     
     "spark.dynamicAllocation.enabled": "true",              # Executor 수 자동 조정 활성화
-    "spark.dynamicAllocation.minExecutors": "4",            # 최소 Executor 수
-    "spark.dynamicAllocation.initialExecutors": "8",        # 초기 Executor 수
-    "spark.dynamicAllocation.maxExecutors": "20",           # 최대 Executor 수 (Karpenter가 자동으로 노드 증설)
+    "spark.dynamicAllocation.minExecutors": "2",            # 최소 Executor 수
+    "spark.dynamicAllocation.initialExecutors": "4",        # 초기 Executor 수
+    "spark.dynamicAllocation.maxExecutors": "16",           # 최대 Executor 수 (Karpenter가 자동으로 노드 증설)
 
     # ─────────────────────────────
     # 리소스 요청/제한 (Kubernetes 스케줄링용)
@@ -50,8 +52,8 @@ spark_configs = {
     # ─────────────────────────────
     "spark.sql.adaptive.enabled": "true",                   # AQE 활성화
     "spark.sql.adaptive.coalescePartitions.enabled": "true",# 작은 파티션 자동 병합
-    "spark.sql.shuffle.partitions": "50",                   # 셔플 파티션 수 (적절한 병렬성 확보)
-    "spark.default.parallelism": "16",                      # 기본 병렬 작업 수
+    "spark.sql.shuffle.partitions": "8",                   # 셔플 파티션 수 (적절한 병렬성 확보)
+    "spark.default.parallelism": "8",                      # 기본 병렬 작업 수
     "spark.sql.files.maxPartitionBytes": "134217728",       # 파일 파티션 크기 (128MB)
 
     # ─────────────────────────────
