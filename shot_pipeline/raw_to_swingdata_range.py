@@ -181,6 +181,7 @@ def raw_to_swingdata_range_dag():
             echo '[START] spark-submit 실행';
             /opt/spark/bin/spark-submit """ + " ".join(base_args)
         ],
+        do_xcom_push=False,
         get_logs=True,
         is_delete_operator_pod=True,
         service_account_name="airflow-irsa",
