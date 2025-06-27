@@ -174,7 +174,8 @@ def raw_to_swingdata_range_dag():
             """
             echo '[WAIT] ConfigMap 생성 대기 중...';
             for i in $(seq 1 30); do
-            kubectl get configmap -n airflow | grep spark-drv || break;
+            if [ -f /opt/spark/conf/spark.properties ]; then echo '[OK] spark.properties 발견'; break; fi;
+            echo '[WAIT] spark.properties 없음, 대기 중...';
             sleep 1;
             done;
             echo '[START] spark-submit 실행';
