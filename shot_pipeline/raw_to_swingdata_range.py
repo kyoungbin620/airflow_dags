@@ -169,13 +169,22 @@ def raw_to_swingdata_range_dag():
         name="base-to-swingdata-pipeline",
         namespace="airflow",
         image=spark_image,
-        cmds=["/opt/spark/bin/spark-submit"],
-        node_selector={"intent": "spark"},
-        arguments=base_args,
+        cmds=["sh", "-c"],
+        arguments=[
+            """
+            echo '[WAIT] ConfigMap 생성 대기 중...';
+            for i in $(seq 1 30); do
+            kubectl get configmap -n airflow | grep spark-drv || break;
+            sleep 1;
+            done;
+            echo '[START] spark-submit 실행';
+            /opt/spark/bin/spark-submit """ + " ".join(base_args)
+        ],
         get_logs=True,
         is_delete_operator_pod=True,
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
+        node_selector={"intent": "spark"},
         container_resources=V1ResourceRequirements(
             requests={"memory": "1.5Gi", "cpu": "500m"},
             limits={"memory": "2Gi", "cpu": "1000m"},
