@@ -143,6 +143,7 @@ def raw_to_swingdata_range_dag():
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
         node_selector={"intent": "spark"},
+        do_xcom_push=False,
         arguments=raw_args,
         get_logs=True,
         is_delete_operator_pod=False,

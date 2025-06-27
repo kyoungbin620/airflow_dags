@@ -18,6 +18,7 @@ default_args = {
 
 # === Spark 공통 구성 ===
 # Spark 공통 구성
+# Spark 공통 구성
 spark_configs = {
     # ─────────────────────────────
     # 드라이버 설정
@@ -95,6 +96,7 @@ spark_configs = {
     "spark.kubernetes.executor.node.selector.intent": "spark",       # 노드 선택자 (NodePool과 연결)
 }
 
+
 @dag(
     dag_id=dag_name,
     default_args=default_args,
@@ -147,6 +149,7 @@ def raw_to_swingdata_range_dag():
         cmds=["/opt/spark/bin/spark-submit"],
         node_selector={"intent": "spark"},
         arguments=make_args("s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py", "{{ ti.xcom_pull(task_ids='get_run_date') }}"),
+        do_xcom_push=False,
         get_logs=True,
         is_delete_operator_pod=False,
         service_account_name="airflow-irsa",
@@ -162,13 +165,24 @@ def raw_to_swingdata_range_dag():
         name="base-to-swingdata-pipeline",
         namespace="airflow",
         image=spark_image,
-        cmds=["/opt/spark/bin/spark-submit"],
-        node_selector={"intent": "spark"},
-        arguments=make_args("s3a://creatz-airflow-jobs/base_to_swingdata/scripts/run_swingdata_extract_pipeline.py", "{{ ti.xcom_pull(task_ids='get_run_date') }}"),
+        cmds=["sh", "-c"],
+        arguments=[
+            """
+            echo '[WAIT] ConfigMap 생성 대기 중...';
+            for i in $(seq 1 30); do
+            if [ -f /opt/spark/conf/spark.properties ]; then echo '[OK] spark.properties 발견'; break; fi;
+            echo '[WAIT] spark.properties 없음, 대기 중...';
+            sleep 1;
+            done;
+            echo '[START] spark-submit 실행';
+            /opt/spark/bin/spark-submit """ + " ".join(base_args)
+        ],
+        do_xcom_push=False,
         get_logs=True,
-        is_delete_operator_pod=False,
+        is_delete_operator_pod=True,
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
+        node_selector={"intent": "spark"},
         container_resources=V1ResourceRequirements(
             requests={"memory": "1.5Gi", "cpu": "500m"},
             limits={"memory": "2Gi", "cpu": "1000m"},
