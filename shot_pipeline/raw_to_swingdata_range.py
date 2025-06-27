@@ -160,7 +160,7 @@ def raw_to_swingdata_range_dag():
         "--deploy-mode", "cluster",
         "--name", f"{dag_name}-base",
         *common_conf,
-        "s3a://creatz-airflow-jobs/monitoring/scripts/run_swingdata_extract_pipeline_v1.0.0.py",
+        "s3a://creatz-airflow-jobs/base_to_swingdata/scripts/run_swingdata_extract_pipeline.py",
         "--start-date", "{{ params.start_date }}",
         "--end-date", "{{ params.end_date }}",
     ]
