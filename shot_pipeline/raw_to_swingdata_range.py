@@ -21,7 +21,7 @@ spark_configs = {
     # ─────────────────────────────
     # 드라이버 설정
     # ─────────────────────────────
-    "spark.driver.cores": "1",
+    "spark.driver.cores": "2",
     "spark.driver.memory": "6g",
     "spark.driver.memoryOverhead": "512m",
     "spark.driver.maxResultSize": "1g",
@@ -29,7 +29,7 @@ spark_configs = {
     # ─────────────────────────────
     # 실행자 (Executor) 설정
     # ─────────────────────────────
-    "spark.executor.cores": "1",                            # Executor 하나당 사용할 CPU 수
+    "spark.executor.cores": "2",                            # Executor 하나당 사용할 CPU 수
     "spark.executor.memory": "2g",                          # Executor 메모리
     "spark.executor.memoryOverhead": "512m",                  # JVM 외 메모리 오버헤드 (압축 해제시 필요)
 
