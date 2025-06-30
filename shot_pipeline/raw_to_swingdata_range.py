@@ -193,8 +193,44 @@ def raw_to_swingdata_range_dag():
             limits={"memory": "2Gi", "cpu": "1000m"},
         ),
     )
+    
+    instert_db_task = KubernetesPodOperator(
+        task_id="run_spark_shot_summary_range",
+        name="spark-shot-summary-range",
+        namespace="airflow",
+        image=spark_image,
+        cmds=["/opt/spark/bin/spark-submit"],
+        arguments=[
+            # 클러스터 및 모드
+            "--master",      api_server,
+            "--deploy-mode", "cluster",
+            "--name",        f"{dag_name}-job",
+            # 공통 conf
+            *common_conf,
+            # JAR 하나만 추가
+            "--jars",       "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar",
+            # 스크립트 파일
+            "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py",
+            # 날짜 범위 파라미터
+            "--start_date",  "{{ params.start_date }}",
+            "--end_date",    "{{ params.end_date }}",
+            "--input_s3_base", "s3a://creatz-aim-swing-mx-data-prod/parquet/shotinfo_swingtrace",
+            "--jdbc_url",      "jdbc:postgresql://10.133.135.243:5432/monitoring",
+            "--jdbc_table",    "shot_summary",
+            "--jdbc_user",     "aim",
+            "--jdbc_password", "aim3062",
+        ],
+        get_logs=True,
+        is_delete_operator_pod=False,
+        service_account_name="airflow-irsa",
+        image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
+        container_resources=V1ResourceRequirements(
+            requests={"memory": "2Gi", "cpu": "500m"},
+            limits=  {"memory": "4Gi", "cpu": "1000m"},
+        ),
+    )
 
-    log_task >> raw_task >> base_task
+    log_task >> raw_task >> instert_db_task
 
 # DAG 인스턴스화
 raw_to_swingdata_range_dag_instance = raw_to_swingdata_range_dag()
