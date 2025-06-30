@@ -183,7 +183,7 @@ def raw_to_swingdata_range_dag():
             /opt/spark/bin/spark-submit """ + " ".join(base_args)
         ],
         do_xcom_push=False,
-        get_logs=True,
+        get_logs=False,
         is_delete_operator_pod=True,
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
@@ -221,7 +221,7 @@ def raw_to_swingdata_range_dag():
             "--jdbc_password", "aim3062",
         ],
         do_xcom_push=False,
-        get_logs=True,
+        get_logs=False,
         is_delete_operator_pod=False,
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],

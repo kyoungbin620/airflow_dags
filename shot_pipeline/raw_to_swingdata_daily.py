@@ -96,7 +96,7 @@ spark_configs = {
 @dag(
     dag_id=dag_name,
     default_args=default_args,
-    schedule_interval="0 17 * * *",   # 매일 UTC 17시에 실행
+    schedule_interval="0 1 * * *",   # 매일 UTC 17시에 실행
     start_date=days_ago(1),           # DAG 최초 실행 기준
     catchup=False,
     tags=["spark", "s3", "parquet"],
@@ -163,6 +163,7 @@ def raw_to_swingdata_range_dag():
         "--start-date", date_template,
         "--end-date",   date_template,
     ]
+
     base_task = KubernetesPodOperator(
         task_id="run_base_to_swingdata_range",
         name="base-to-swingdata-pipeline",
