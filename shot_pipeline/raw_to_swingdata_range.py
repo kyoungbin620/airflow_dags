@@ -194,7 +194,7 @@ def raw_to_swingdata_range_dag():
         ),
     )
     
-    instert_db_task = KubernetesPodOperator(
+    insert_db_task = KubernetesPodOperator(
         task_id="run_spark_shot_summary_range",
         name="spark-shot-summary-range",
         namespace="airflow",
@@ -231,7 +231,7 @@ def raw_to_swingdata_range_dag():
         ),
     )
 
-    log_task >> raw_task >> base_task >> instert_db_task
+    log_task >> raw_task >> base_task >> insert_db_task
 
 # DAG 인스턴스화
 raw_to_swingdata_range_dag_instance = raw_to_swingdata_range_dag()
