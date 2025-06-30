@@ -209,8 +209,8 @@ def raw_to_swingdata_range_dag():
             # 스크립트 파일
             "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py",
             # 날짜 범위 파라미터
-            "--start_date",  "{{ params.start_date }}",
-            "--end_date",    "{{ params.end_date }}",
+            "--start_date",  date_template,
+            "--end_date",    date_template,
             "--input_s3_base", "s3a://creatz-aim-swing-mx-data-prod/parquet/shotinfo_swingtrace",
             "--jdbc_url",      "jdbc:postgresql://10.133.135.243:5432/monitoring",
             "--jdbc_table",    "shot_summary",
