@@ -182,8 +182,8 @@ def raw_to_swingdata_range_dag():
             /opt/spark/bin/spark-submit """ + " ".join(base_args)
         ],
         do_xcom_push=False,
-        get_logs=True,
-        is_delete_operator_pod=True,
+        get_logs=False,
+        is_delete_operator_pod=False,
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         node_selector={"intent": "spark"},
