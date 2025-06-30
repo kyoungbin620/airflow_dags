@@ -220,6 +220,7 @@ def raw_to_swingdata_range_dag():
             "--jdbc_user",     "aim",
             "--jdbc_password", "aim3062",
         ],
+        do_xcom_push=False,
         get_logs=True,
         is_delete_operator_pod=False,
         service_account_name="airflow-irsa",
