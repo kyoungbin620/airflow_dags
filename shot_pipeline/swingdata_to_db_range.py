@@ -16,7 +16,7 @@ default_args = {
     "retry_delay": timedelta(minutes=3),
 }
 
-# ── Spark 공통 설정 (JDBC 드라이버 분산 포함) ──
+# ── Spark 공통 설정 (외부에서 가져온 느낌으로) ──
 spark_configs = {
     "spark.driver.memory":                        "1g",
     "spark.driver.maxResultSize":                 "512m",
@@ -28,7 +28,7 @@ spark_configs = {
     "spark.dynamicAllocation.initialExecutors":   "1",
     "spark.executor.cores":                       "1",
     "spark.sql.adaptive.enabled":                 "true",
-    "spark.sql.adaptive.coalescePartitions.enabled": "true",
+    "spark.sql.adaptive.coalescePartitions.enabled":"true",
     "spark.sql.shuffle.partitions":               "20",
     "spark.memory.offHeap.enabled":               "true",
     "spark.memory.offHeap.size":                  "512m",
@@ -42,9 +42,9 @@ spark_configs = {
     "spark.hadoop.fs.s3a.access.style":           "PathStyle",
     "spark.hadoop.fs.s3a.path.style.access":      "true",
     "spark.hadoop.fs.s3.impl":                    "org.apache.hadoop.fs.s3a.S3AFileSystem",
-    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
+    "spark.hadoop.fs.s3a.aws.credentials.provider":"com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
     "spark.kubernetes.namespace":                 "airflow",
-    "spark.kubernetes.authenticate.driver.serviceAccountName": "airflow-irsa",
+    "spark.kubernetes.authenticate.driver.serviceAccountName":"airflow-irsa",
     "spark.kubernetes.container.image.pullSecrets": "ecr-pull-secret",
     "spark.kubernetes.container.image":           spark_image,
     "spark.kubernetes.driver.container.image":    spark_image,
@@ -53,10 +53,6 @@ spark_configs = {
     "spark.kubernetes.driver.limit.cores":        "2",
     "spark.kubernetes.executor.request.cores":    "1",
     "spark.kubernetes.executor.limit.cores":      "2",
-    # ── JDBC 드라이버 JAR을 S3에서 자동 분산 ──
-    "spark.jars":                                "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar",
-    "spark.driver.extraClassPath":               "postgresql-42.7.3.jar",
-    "spark.executor.extraClassPath":             "postgresql-42.7.3.jar",
 }
 
 @dag(
@@ -66,10 +62,18 @@ spark_configs = {
     start_date=days_ago(1),
     catchup=False,
     params={
-        "start_date": Param("2025-06-01", type="string", format="%Y-%m-%d",
-                            description="처리 시작 날짜"),
-        "end_date":   Param("2025-06-03", type="string", format="%Y-%m-%d",
-                            description="처리 종료 날짜"),
+        "start_date": Param(
+            default="2025-06-01",
+            type="string",
+            format="%Y-%m-%d",
+            description="처리 시작 날짜"
+        ),
+        "end_date": Param(
+            default="2025-06-03",
+            type="string",
+            format="%Y-%m-%d",
+            description="처리 종료 날짜"
+        ),
     },
     tags=["spark", "jdbc", "s3"],
 )
@@ -101,15 +105,19 @@ def spark_shot_summary_range_dag():
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
         arguments=[
+            # 클러스터 및 모드
             "--master",      api_server,
             "--deploy-mode", "cluster",
             "--name",        f"{dag_name}-job",
-            # 공통 Spark 설정 (여기에 spark.jars 도 포함됨)
+            # 공통 conf
             *common_conf,
-            # 스크립트
+            # JAR 하나만 추가
+            "--jars",       "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar",
+            # 스크립트 파일
             "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py",
-            "--start_date",    "{{ params.start_date }}",
-            "--end_date",      "{{ params.end_date }}",
+            # 날짜 범위 파라미터
+            "--start_date",  "{{ params.start_date }}",
+            "--end_date",    "{{ params.end_date }}",
             "--input_s3_base", "s3a://creatz-aim-swing-mx-data-prod/parquet/shotinfo_swingtrace",
             "--jdbc_url",      "jdbc:postgresql://10.133.135.243:5432/monitoring",
             "--jdbc_table",    "shot_summary",
