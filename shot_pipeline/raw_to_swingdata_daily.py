@@ -96,7 +96,7 @@ spark_configs = {
 @dag(
     dag_id=dag_name,
     default_args=default_args,
-    schedule_interval="0 1 * * *",   # 매일 UTC 17시에 실행
+    schedule_interval="0 1 * * *",   # 매일 UTC 1시에 실행
     start_date=days_ago(1),           # DAG 최초 실행 기준
     catchup=False,
     tags=["spark", "s3", "parquet"],
@@ -110,7 +110,7 @@ def raw_to_swingdata_range_dag():
         logging.info(f"[INPUT] processing date: {yesterday}")
 
     # 전날 날짜 템플릿 변수
-    date_template = "{{ macros.ds_add(ds, -1) }}"
+    date_template = "{{ ds }}"
 
     log_task = log_date(yesterday=date_template)
 
@@ -221,6 +221,7 @@ def raw_to_swingdata_range_dag():
         ],
         get_logs=True,
         is_delete_operator_pod=False,
+        node_selector={"intent": "spark"},
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(

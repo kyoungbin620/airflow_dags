@@ -223,6 +223,7 @@ def raw_to_swingdata_range_dag():
         do_xcom_push=False,
         get_logs=True,
         is_delete_operator_pod=False,
+        node_selector={"intent": "spark"},
         service_account_name="airflow-irsa",
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
