@@ -109,8 +109,8 @@ def raw_to_swingdata_range_dag():
         import logging
         logging.info(f"[INPUT] processing date: {yesterday}")
 
-    # 전날 날짜 템플릿 변수
-    date_template = "{{ ds }}"
+    # 실행 구간(data_interval_end)에서 하루 전 날짜를 yyyy-MM-dd 로 포맷
+    date_template = "{{ (data_interval_end - macros.timedelta(days=1)).strftime('%Y-%m-%d') }}"
 
     log_task = log_date(yesterday=date_template)
 
