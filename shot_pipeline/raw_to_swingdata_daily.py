@@ -91,6 +91,10 @@ spark_configs = {
     # 노드 선택 및 배치 제어
     # ─────────────────────────────
     "spark.kubernetes.executor.node.selector.intent": "spark",       # 노드 선택자 (NodePool과 연결)
+
+        # 이벤트 로그
+    "spark.eventLog.enabled": "true",
+    "spark.eventLog.dir": "s3a://aim-spark/spark-events"
 }
 
 @dag(
