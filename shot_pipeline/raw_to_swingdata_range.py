@@ -170,18 +170,8 @@ def raw_to_swingdata_range_dag():
         name="base-to-swingdata-pipeline",
         namespace="airflow",
         image=spark_image,
-        cmds=["sh", "-c"],
-        arguments=[
-            """
-            echo '[WAIT] ConfigMap 생성 대기 중...';
-            for i in $(seq 1 30); do
-            if [ -f /opt/spark/conf/spark.properties ]; then echo '[OK] spark.properties 발견'; break; fi;
-            echo '[WAIT] spark.properties 없음, 대기 중...';
-            sleep 1;
-            done;
-            echo '[START] spark-submit 실행';
-            /opt/spark/bin/spark-submit """ + " ".join(base_args)
-        ],
+        cmds=["/opt/spark/bin/spark-submit"],
+        arguments=base_args,
         do_xcom_push=False,
         get_logs=True,
         is_delete_operator_pod=False,
