@@ -35,8 +35,8 @@ spark_configs = {
     
     "spark.dynamicAllocation.enabled": "true",              # Executor 수 자동 조정 활성화
     "spark.dynamicAllocation.minExecutors": "2",            # 최소 Executor 수
-    "spark.dynamicAllocation.initialExecutors": "4",        # 초기 Executor 수
-    "spark.dynamicAllocation.maxExecutors": "32",           # 최대 Executor 수 (Karpenter가 자동으로 노드 증설)
+    "spark.dynamicAllocation.initialExecutors": "2",        # 초기 Executor 수
+    "spark.dynamicAllocation.maxExecutors": "4",           # 최대 Executor 수 (Karpenter가 자동으로 노드 증설)
 
     # ─────────────────────────────
     # 리소스 요청/제한 (Kubernetes 스케줄링용)
