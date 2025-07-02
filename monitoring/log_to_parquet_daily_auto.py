@@ -143,7 +143,7 @@ with DAG(
                 "--deploy-mode", "cluster",
                 "--name", dag_name,
                 *spark_conf_args,
-                "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily_v1.0.0.py",
+                "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily.py",
                 "--start-date", prev_date,
                 "--end-date",   prev_date,
             ],

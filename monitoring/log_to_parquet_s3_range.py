@@ -134,7 +134,7 @@ def log_to_parquet_dag():
             "--deploy-mode", "cluster",
             "--name", dag_id,
             *spark_conf_args,
-            "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily_v1.0.0.py",
+            "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily.py",
             "--start-date", "{{ params.start_date }}",
             "--end-date", "{{ params.end_date }}",
         ],
