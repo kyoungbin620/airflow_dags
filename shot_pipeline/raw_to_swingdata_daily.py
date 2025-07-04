@@ -105,7 +105,7 @@ spark_configs = {
     catchup=False,
     tags=["spark", "s3", "parquet"],
 )
-def raw_to_swingdata_range_dag():
+def raw_to_swingdata_daily_dag():
 
     # (선택) 전날 날짜 로깅
     @task()
@@ -139,7 +139,7 @@ def raw_to_swingdata_range_dag():
         "--end-date",   date_template,
     ]
     raw_task = KubernetesPodOperator(
-        task_id="run_raw_to_base_range",
+        task_id="run_raw_to_base_daily",
         name="raw-to-base-pipeline",
         namespace="airflow",
         image=spark_image,
@@ -169,7 +169,7 @@ def raw_to_swingdata_range_dag():
     ]
 
     base_task = KubernetesPodOperator(
-        task_id="run_base_to_swingdata_range",
+        task_id="run_base_to_swingdata_daily",
         name="base-to-swingdata-pipeline",
         namespace="airflow",
         image=spark_image,
@@ -198,8 +198,8 @@ def raw_to_swingdata_range_dag():
     ) 
 
     insert_db_task = KubernetesPodOperator(
-        task_id="run_spark_shot_summary_range",
-        name="spark-shot-summary-range",
+        task_id="run_spark_shot_summary_daily",
+        name="spark-shot-summary-daily",
         namespace="airflow",
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
@@ -237,4 +237,4 @@ def raw_to_swingdata_range_dag():
     log_task >> raw_task >> base_task >> insert_db_task
 
 # DAG 인스턴스화
-raw_to_swingdata_range_dag_instance = raw_to_swingdata_range_dag()
+raw_to_swingdata_daily_dag_instance = raw_to_swingdata_daily_dag()

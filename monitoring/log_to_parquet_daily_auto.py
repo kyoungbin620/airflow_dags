@@ -1,8 +1,7 @@
-from airflow import DAG
-from airflow.decorators import task
+from airflow.decorators import dag, task
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
+from airflow.utils.dates import days_ago
 from datetime import datetime, timedelta
-from airflow.models.param import Param
 from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
 
 dag_name    = "log_to_parquet_daily_auto"
@@ -97,17 +96,16 @@ spark_configs = {
     "spark.eventLog.dir": "s3a://aim-spark/spark-events"
 }
 
-
-with DAG(
+@dag(
     dag_id=dag_name,
     default_args=default_args,
-    # 매일 UTC 02:00 실행
-    schedule_interval="0 1 * * *",
-    # 고정된 UTC 과거 시작일 (pendulum 불필요)
-    start_date=datetime(2025, 5, 28),
+    schedule_interval="0 1 * * *",   # 매일 UTC 1시에 실행
+    start_date=days_ago(1),           # DAG 최초 실행 기준
     catchup=False,
     tags=["spark", "s3", "parquet"],
-) as dag:
+)
+
+def log_to_parquet_daily_dag():
 
     @task()
     def run_spark_job(**context):
@@ -117,8 +115,7 @@ with DAG(
         #     datetime.strptime(ds, "%Y-%m-%d")
         #     - timedelta(days=1)
         # ).strftime("%Y-%m-%d")
-        prev_date = context["ds"]  # ex. "2025-07-04"
-
+        prev_date = "{{ (data_interval_end - macros.timedelta(days=1)).strftime('%Y-%m-%d') }}"
 
         # spark_configs → --conf 리스트
         spark_conf_args = []
@@ -156,6 +153,8 @@ with DAG(
                 requests={"memory": "1Gi", "cpu": "500m"},
                 limits={"memory": "2Gi", "cpu": "1000m"},
             ),
-        ).execute(context=context)
+        )
+        run_spark_job
 
-    run_spark_job()
+    
+log_to_parquet_daily_dag_instance = log_to_parquet_daily_dag
