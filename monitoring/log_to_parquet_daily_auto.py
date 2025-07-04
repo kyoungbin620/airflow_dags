@@ -117,7 +117,8 @@ with DAG(
         #     datetime.strptime(ds, "%Y-%m-%d")
         #     - timedelta(days=1)
         # ).strftime("%Y-%m-%d")
-        prev_date = "{{ (data_interval_end - macros.timedelta(days=1)).strftime('%Y-%m-%d') }}"
+        prev_date = context["ds"]  # ex. "2025-07-04"
+
 
         # spark_configs → --conf 리스트
         spark_conf_args = []
