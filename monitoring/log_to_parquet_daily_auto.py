@@ -104,7 +104,6 @@ spark_configs = {
     catchup=False,
     tags=["spark", "s3", "parquet"],
 )
-
 def log_to_parquet_daily_dag():
 
     @task()
