@@ -105,55 +105,43 @@ spark_configs = {
     tags=["spark", "s3", "parquet"],
 )
 def log_to_parquet_daily_dag():
+    prev_date = "{{ (data_interval_end - macros.timedelta(days=1)).strftime('%Y-%m-%d') }}"
 
-    @task()
-    def run_spark_job(**context):
-        # Airflow 매크로 ds: "실행 기준일 YYYY-MM-DD"
-        # ds = context["ds"]                     # ex. "2025-06-10"
-        # prev_date = (                           # 전날 날짜 계산
-        #     datetime.strptime(ds, "%Y-%m-%d")
-        #     - timedelta(days=1)
-        # ).strftime("%Y-%m-%d")
-        prev_date = "{{ (data_interval_end - macros.timedelta(days=1)).strftime('%Y-%m-%d') }}"
+    spark_conf_args = []
+    for key, value in spark_configs.items():
+        spark_conf_args += ["--conf", f"{key}={value}"]
 
-        # spark_configs → --conf 리스트
-        spark_conf_args = []
-        for key, value in spark_configs.items():
-            spark_conf_args += ["--conf", f"{key}={value}"]
+    # 추가 Spark UI 설정
+    spark_conf_args += [
+        "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
+        "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
+        "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
+    ]
 
-        # UI 프록시 추가 설정
-        spark_conf_args += [
-            "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
-            "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
-            "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
-        ]
+    run_spark = KubernetesPodOperator(
+        task_id="run_spark_submit_s3_script_daily",
+        name="spark-submit-s3-script-daily",
+        namespace="airflow",
+        image=spark_image,
+        cmds=["/opt/spark/bin/spark-submit"],
+        node_selector={"intent": "spark"},
+        arguments=[
+            "--master", api_server,
+            "--deploy-mode", "cluster",
+            "--name", dag_name,
+            *spark_conf_args,
+            "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily.py",
+            "--start-date", prev_date,
+            "--end-date",   prev_date,
+        ],
+        get_logs=True,
+        is_delete_operator_pod=True,
+        service_account_name="airflow-irsa",
+        image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
+        container_resources=V1ResourceRequirements(
+            requests={"memory": "1Gi", "cpu": "500m"},
+            limits={"memory": "2Gi", "cpu": "1000m"},
+        ),
+    )
 
-        return KubernetesPodOperator(
-            task_id="run_spark_submit_s3_script_daily",
-            name="spark-submit-s3-script-daily",
-            namespace="airflow",
-            image=spark_image,
-            cmds=["/opt/spark/bin/spark-submit"],
-            node_selector={"intent": "spark"},
-            arguments=[
-                "--master", api_server,
-                "--deploy-mode", "cluster",
-                "--name", dag_name,
-                *spark_conf_args,
-                "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily.py",
-                "--start-date", prev_date,
-                "--end-date",   prev_date,
-            ],
-            get_logs=True,
-            is_delete_operator_pod=True,
-            service_account_name="airflow-irsa",
-            image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
-            container_resources=V1ResourceRequirements(
-                requests={"memory": "1Gi", "cpu": "500m"},
-                limits={"memory": "2Gi", "cpu": "1000m"},
-            ),
-        )
-        run_spark_job
-
-    
-log_to_parquet_daily_dag_instance = log_to_parquet_daily_dag
+dag = log_to_parquet_daily_dag()  # ← 반드시 global scope에 있어야 함
