@@ -23,7 +23,7 @@ with DAG(
     raw_to_base = SparkKubernetesOperator(
         task_id="run_raw_to_base_daily",
         namespace="airflow",
-        application_file="/opt/airflow/dags/repo/shot_pipeline/raw-to-base.yaml",
+        application_file="{{ '/opt/airflow/dags/repo/shot_pipeline/raw-to-base.yaml' }}",
         kubernetes_conn_id="kubernetes_default",
         delete_on_termination=True,
         reattach_on_restart=True,
@@ -33,7 +33,7 @@ with DAG(
     base_to_swing = SparkKubernetesOperator(
         task_id="run_base_to_swingdata_daily",
         namespace="airflow",
-        application_file="/opt/airflow/dags/repo/shot_pipeline/base-to-swing.yaml",
+        application_file="{{ '/opt/airflow/dags/repo/shot_pipeline/base-to-swing.yaml' }}",
         kubernetes_conn_id="kubernetes_default",
         delete_on_termination=True,
         reattach_on_restart=True,
@@ -43,7 +43,7 @@ with DAG(
     swing_to_db = SparkKubernetesOperator(
         task_id="run_spark_shot_summary_daily",
         namespace="airflow",
-        application_file="/opt/airflow/dags/repo/shot_pipeline/swing-to-db.yaml",
+        application_file="{{ '/opt/airflow/dags/repo/shot_pipeline/swing-to-db.yaml' }}",
         kubernetes_conn_id="kubernetes_default",
         delete_on_termination=True,
         reattach_on_restart=True,
