@@ -8,30 +8,6 @@ spec:
   pythonVersion: "3"
   mode: cluster
   image: 577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4
-  imagePullPolicy: Always
-  mainApplicationFile: s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py
-  sparkVersion: 3.5.3
-  restartPolicy:
-    type: Never
-  deps:
-    pyFiles:
-      - s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip
-  driver:
-    cores: 2
-    memory: 6g
-    memoryOverhead: 512m
-    serviceAccount: airflow-irsa
-    labels:
-      spark-ui-selector: raw_to_swingdata_daily
-    nodeSelector:
-      intent: spark
-  executor:
-    cores: 2
-    memory: 2g
-    memoryOverhead: 512m
-    instances: 4
-    nodeSelector:
-      intent: spark
   sparkConf:
     spark.driver.cores: "2"
     spark.driver.memory: "6g"
@@ -63,6 +39,8 @@ spec:
     spark.hadoop.fs.s3a.access.style: "PathStyle"
     spark.hadoop.fs.s3a.path.style.access: "true"
     spark.hadoop.fs.s3.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"  # ← 이 라인 추가!
+    spark.hadoop.fs.s3a.aws.credentials.provider: "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
     spark.hadoop.fs.s3a.aws.credentials.provider: "com.amazonaws.auth.WebIdentityTokenCredentialsProvider"
     spark.kubernetes.namespace: "airflow"
     spark.kubernetes.authenticate.driver.serviceAccountName: "airflow-irsa"
@@ -74,3 +52,28 @@ spec:
     spark.eventLog.enabled: "true"
     spark.eventLog.dir: "s3a://aim-spark/spark-events"
     spark.ui.proxyBase: "/spark-ui/raw_to_swingdata_daily"
+  imagePullPolicy: Always
+  mainApplicationFile: s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py
+  sparkVersion: 3.5.3
+  restartPolicy:
+    type: Never
+  deps:
+    pyFiles:
+      - s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip
+  driver:
+    cores: 2
+    memory: 6g
+    memoryOverhead: 512m
+    serviceAccount: airflow-irsa
+    labels:
+      spark-ui-selector: raw_to_swingdata_daily
+    nodeSelector:
+      intent: spark
+  executor:
+    cores: 2
+    memory: 2g
+    memoryOverhead: 512m
+    instances: 4
+    nodeSelector:
+      intent: spark
+ 
