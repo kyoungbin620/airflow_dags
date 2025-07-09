@@ -12,6 +12,6 @@ with DAG(
     spark_job = SparkKubernetesOperator(
         task_id="run_simple_spark_job",
         namespace="airflow",  # Spark driver pod이 실행될 namespace
-        application_file="/opt/airflow/dags/repo/shot_pipeline/test/spark-simple.yaml",  # YAML 위치
+        application_file="repo/shot_pipeline/test/spark-simple.yaml",
         do_xcom_push=False,
     )
