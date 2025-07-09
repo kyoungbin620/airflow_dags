@@ -1,6 +1,6 @@
 from airflow import DAG
 from datetime import datetime
-from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
+from astronomer.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
 
 with DAG(
     dag_id="spark_simple_dag",
@@ -11,7 +11,7 @@ with DAG(
 
     spark_job = SparkKubernetesOperator(
         task_id="run_simple_spark_job",
-        namespace="airflow",  # Spark driver pod이 실행될 namespace
+        namespace="airflow",  # SparkApplication이 생성될 namespace
         application_file="repo/shot_pipeline/test/spark-simple.yaml",
         do_xcom_push=False,
     )
