@@ -48,7 +48,10 @@ spark_task = SparkKubernetesOperator(
                 'serviceAccount': 'airflow-irsa',  # IRSA 연동된 ServiceAccount
                 'nodeSelector': {
                     'intent': 'spark'
-                }
+                    },
+                'labels': {
+                     'component': 'spark-driver'
+                    }
             },
             'executor': {
                 'cores': 1,
@@ -56,6 +59,9 @@ spark_task = SparkKubernetesOperator(
                 'instances': 2,
                 'nodeSelector': {
                     'intent': 'spark'
+                }
+                'labels': {
+                    'component': 'spark-executor'
                 }
             }
         }
