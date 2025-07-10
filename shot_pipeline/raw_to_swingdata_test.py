@@ -136,6 +136,9 @@ def raw_to_swingdata_daily_dag():
                 "serviceAccount": "airflow-irsa",
                 "nodeSelector":   {"intent": "spark"},
             },
+            'labels': {
+                'component': 'spark-executor'
+            }
             "executor": {
                 "cores":          2,
                 "memory":         "2g",
@@ -143,6 +146,9 @@ def raw_to_swingdata_daily_dag():
                 "instances":      4,  # spark.dynamicAllocation.initialExecutors
                 "nodeSelector":   {"intent": "spark"},
             },
+            'labels': {
+                'component': 'spark-executor'
+            }
             "restartPolicy": {"type": "Never"},
         }
     }
