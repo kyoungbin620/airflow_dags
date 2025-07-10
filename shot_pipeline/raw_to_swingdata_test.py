@@ -3,7 +3,7 @@ from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKu
 from airflow.decorators import dag, task
 from airflow.utils.dates import days_ago
 from datetime import timedelta
-
+import copy
 # ─────────────────────────────
 # 공통 설정
 # ─────────────────────────────
