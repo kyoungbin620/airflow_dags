@@ -1,6 +1,8 @@
 from airflow import DAG
 from datetime import datetime
-from astronomer.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
+from airflow.providers.apache.spark.operators.spark_kubernetes import SparkKubernetesOperator
+
+
 
 with DAG(
     dag_id="spark_simple_dag",
