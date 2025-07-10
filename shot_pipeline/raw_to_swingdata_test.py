@@ -134,10 +134,11 @@ def raw_to_swingdata_daily_dag():
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
                 "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-driver"
+                },
             },
-            "labels": {
-                "component": "spark-executor"
-            },
+
             "executor": {
                 "cores":          2,
                 "memory":         "2g",
@@ -194,20 +195,22 @@ def raw_to_swingdata_daily_dag():
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
                 "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-driver"
+                },
             },
-            "labels": {
-                "component": "spark-executor"
-            },
+
             "executor": {
                 "cores":          2,
                 "memory":         "2g",
                 "memoryOverhead": "512m",
                 "instances":      4,  # spark.dynamicAllocation.initialExecutors
                 "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-executor"
+                },
             },
-            "labels": {
-                "component": "spark-executor"
-            },
+
             "restartPolicy": {"type": "Never"},
         }
     }
@@ -264,7 +267,7 @@ def raw_to_swingdata_daily_dag():
                 "serviceAccount": "airflow-irsa",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
-                    "component": "spark-executor"
+                    "component": "spark-driver"
                 },
             },
             "executor": {
