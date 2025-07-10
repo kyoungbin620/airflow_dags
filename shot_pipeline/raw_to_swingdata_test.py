@@ -170,7 +170,7 @@ def raw_to_swingdata_daily_dag():
     # ─────────────────────────────
     # 2) Parquet → SwingData
     # ─────────────────────────────
-    base_app = raw_app.copy()
+    base_app = copy.deepcopy(raw_app)
     base_app["metadata"] = {
         "name":      f"{dag_name}-base",
         "namespace": "airflow",
@@ -199,7 +199,7 @@ def raw_to_swingdata_daily_dag():
     # ─────────────────────────────
     # 3) SwingData → Database
     # ─────────────────────────────
-    db_app = raw_app.copy()
+    db_app = copy.deepcopy(raw_app)
     db_app["metadata"] = {
         "name":      f"{dag_name}-job",
         "namespace": "airflow",
