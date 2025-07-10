@@ -138,7 +138,7 @@ def raw_to_swingdata_daily_dag():
             },
             'labels': {
                 'component': 'spark-executor'
-            }
+            },
             "executor": {
                 "cores":          2,
                 "memory":         "2g",
@@ -148,7 +148,7 @@ def raw_to_swingdata_daily_dag():
             },
             'labels': {
                 'component': 'spark-executor'
-            }
+            },
             "restartPolicy": {"type": "Never"},
         }
     }
