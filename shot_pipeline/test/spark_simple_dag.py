@@ -43,7 +43,12 @@ spark_task = SparkKubernetesOperator(
                 'type': 'Never'
             },
             'sparkConf': {
-                "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
+                    "spark.hadoop.fs.s3a.endpoint": "s3.us-west-2.amazonaws.com",
+                    "spark.hadoop.fs.s3a.endpoint.region": "us-west-2",
+                    "spark.hadoop.fs.s3a.access.style": "PathStyle",
+                    "spark.hadoop.fs.s3a.path.style.access": "true",
+                    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+                    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
             },
             'driver': {
                 'cores': 1,
