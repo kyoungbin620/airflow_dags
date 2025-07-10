@@ -1,17 +1,66 @@
 from airflow import DAG
-from datetime import datetime
 from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
+from datetime import datetime, timedelta
 
-with DAG(
-    dag_id="spark_simple_dag",
-    start_date=datetime(2025, 1, 1),
-    schedule_interval=None,
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'start_date': datetime(2024, 1, 1),
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+}
+
+dag = DAG(
+    'spark_simple_dag',
+    default_args=default_args,
+    description='A simple Spark DAG with custom image',
+    schedule_interval=None,  # 수동 실행
     catchup=False,
-) as dag:
+    tags=['spark', 'example'],
+)
 
-    spark_job = SparkKubernetesOperator(
-        task_id="run_simple_spark_job",
-        namespace="airflow",  # SparkApplication이 생성될 namespace
-        application_file="repo/shot_pipeline/test/spark-simple.yaml",
-        do_xcom_push=False,
-    )
+spark_task = SparkKubernetesOperator(
+    task_id='run_simple_spark_job',
+    name='simple-spark-job',
+    namespace='airflow',
+    template_spec={
+        'spec': {
+            'type': 'Python',
+            'mode': 'cluster',
+            'sparkVersion': '3.5.3',
+            'image': '577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4',
+            'imagePullPolicy': 'Always',
+            'mainApplicationFile': 'local:///opt/spark/jobs/example.py',
+            'restartPolicy': {
+                'type': 'Never'
+            },
+            'driver': {
+                'cores': 1,
+                'memory': '2g',
+                'serviceAccount': 'airflow-irsa',  # IRSA 연동된 ServiceAccount
+                'nodeSelector': {
+                    'intent': 'spark'
+                }
+            },
+            'executor': {
+                'cores': 1,
+                'memory': '2g',
+                'instances': 2,
+                'nodeSelector': {
+                    'intent': 'spark'
+                }
+            }
+        }
+    },
+    get_logs=True,
+    do_xcom_push=False,
+    success_run_history_limit=1,
+    startup_timeout_seconds=600,
+    log_events_on_failure=True,
+    reattach_on_restart=True,
+    delete_on_termination=True,
+    kubernetes_conn_id='kubernetes_default',
+    dag=dag,
+)
