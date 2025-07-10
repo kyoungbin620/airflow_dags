@@ -26,6 +26,12 @@ spark_task = SparkKubernetesOperator(
     name='simple-spark-job',
     namespace='airflow',
     template_spec={
+        'apiVersion': 'sparkoperator.k8s.io/v1beta2',
+        'kind': 'SparkApplication',
+        'metadata': {
+            'name': 'simple-spark-job',
+            'namespace': 'airflow'
+        },
         'spec': {
             'type': 'Python',
             'mode': 'cluster',
