@@ -263,9 +263,9 @@ def raw_to_swingdata_daily_dag():
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
                 "nodeSelector":   {"intent": "spark"},
-            },
-            "labels": {
-                "component": "spark-executor"
+                "labels": {
+                    "component": "spark-executor"
+                },
             },
             "executor": {
                 "cores":          2,
@@ -273,9 +273,9 @@ def raw_to_swingdata_daily_dag():
                 "memoryOverhead": "512m",
                 "instances":      4,  # spark.dynamicAllocation.initialExecutors
                 "nodeSelector":   {"intent": "spark"},
-            },
-            "labels": {
-                "component": "spark-executor"
+                "labels": {
+                    "component": "spark-executor"
+                },
             },
             "restartPolicy": {"type": "Never"},
         }
