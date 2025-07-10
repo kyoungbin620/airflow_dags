@@ -42,6 +42,9 @@ spark_task = SparkKubernetesOperator(
             'restartPolicy': {
                 'type': 'Never'
             },
+            'sparkConf': {
+                "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
+            },
             'driver': {
                 'cores': 1,
                 'memory': '2g',
