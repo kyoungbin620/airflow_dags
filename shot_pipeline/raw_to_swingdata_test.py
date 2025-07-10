@@ -3,7 +3,6 @@ from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKu
 from airflow.decorators import dag, task
 from airflow.utils.dates import days_ago
 from datetime import timedelta
-import copy
 # ─────────────────────────────
 # 공통 설정
 # ─────────────────────────────
@@ -170,17 +169,49 @@ def raw_to_swingdata_daily_dag():
     # ─────────────────────────────
     # 2) Parquet → SwingData
     # ─────────────────────────────
-    base_app = copy.deepcopy(raw_app)
-    base_app["metadata"] = {
-        "name":      f"{dag_name}-base",
-        "namespace": "airflow",
+    base_app = {
+        "apiVersion": "sparkoperator.k8s.io/v1beta2",
+        "kind":       "SparkApplication",
+        "metadata": {
+            "name":      f"{dag_name}-base",
+            "namespace": "airflow",
+        },
+        "spec": {
+            "type":                "Python",
+            "mode":                "cluster",
+            "sparkVersion":        "3.5.3",
+            "image":               spark_image,
+            "imagePullPolicy":     "Always",
+            "mainApplicationFile": "s3a://creatz-airflow-jobs/base_to_swingdata/scripts/run_swingdata_extract_pipeline.py",
+            "arguments": [
+                "--start-date", date_template,
+                "--end-date",   date_template,
+            ],
+            "sparkConf":          spark_configs,
+            "driver": {
+                "cores":          2,
+                "memory":         "6g",
+                "memoryOverhead": "512m",
+                "serviceAccount": "airflow-irsa",
+                "nodeSelector":   {"intent": "spark"},
+            },
+            "labels": {
+                "component": "spark-executor"
+            },
+            "executor": {
+                "cores":          2,
+                "memory":         "2g",
+                "memoryOverhead": "512m",
+                "instances":      4,  # spark.dynamicAllocation.initialExecutors
+                "nodeSelector":   {"intent": "spark"},
+            },
+            "labels": {
+                "component": "spark-executor"
+            },
+            "restartPolicy": {"type": "Never"},
+        }
     }
-    spec2 = base_app["spec"]
-    spec2["mainApplicationFile"] = "s3a://creatz-airflow-jobs/base_to_swingdata/scripts/run_swingdata_extract_pipeline.py"
-    spec2["arguments"] = [
-        "--start-date", date_template,
-        "--end-date",   date_template,
-    ]
+
 
     base_spark = SparkKubernetesOperator(
         task_id="run_base_to_swingdata_daily",
@@ -199,24 +230,57 @@ def raw_to_swingdata_daily_dag():
     # ─────────────────────────────
     # 3) SwingData → Database
     # ─────────────────────────────
-    db_app = copy.deepcopy(raw_app)
-    db_app["metadata"] = {
-        "name":      f"{dag_name}-job",
-        "namespace": "airflow",
+    db_app = {
+        "apiVersion": "sparkoperator.k8s.io/v1beta2",
+        "kind":       "SparkApplication",
+        "metadata": {
+            "name":      f"{dag_name}-db",
+            "namespace": "airflow",
+        },
+        "spec": {
+            "type":                "Python",
+            "mode":                "cluster",
+            "sparkVersion":        "3.5.3",
+            "image":               spark_image,
+            "imagePullPolicy":     "Always",
+            "mainApplicationFile": "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py",
+            "jars": [
+                "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar"
+            ],
+            "arguments": [
+                "--start_date",    date_template,
+                "--end_date",      date_template,
+                "--input_s3_base", "s3a://creatz-aim-swing-mx-data-prod/parquet/shotinfo_swingtrace",
+                "--jdbc_url",      "jdbc:postgresql://10.133.135.243:5432/monitoring",
+                "--jdbc_table",    "shot_summary",
+                "--jdbc_user",     "aim",
+                "--jdbc_password", "aim3062",
+            ],
+            "sparkConf":          spark_configs,
+            "driver": {
+                "cores":          2,
+                "memory":         "6g",
+                "memoryOverhead": "512m",
+                "serviceAccount": "airflow-irsa",
+                "nodeSelector":   {"intent": "spark"},
+            },
+            "labels": {
+                "component": "spark-executor"
+            },
+            "executor": {
+                "cores":          2,
+                "memory":         "2g",
+                "memoryOverhead": "512m",
+                "instances":      4,  # spark.dynamicAllocation.initialExecutors
+                "nodeSelector":   {"intent": "spark"},
+            },
+            "labels": {
+                "component": "spark-executor"
+            },
+            "restartPolicy": {"type": "Never"},
+        }
     }
-    spec3 = db_app["spec"]
-    spec3["mainApplicationFile"] = "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py"
-    # JDBC용 JAR 포함
-    spec3.setdefault("jars", []).append("s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar")
-    spec3["arguments"] = [
-        "--start_date",    date_template,
-        "--end_date",      date_template,
-        "--input_s3_base", "s3a://creatz-aim-swing-mx-data-prod/parquet/shotinfo_swingtrace",
-        "--jdbc_url",      "jdbc:postgresql://10.133.135.243:5432/monitoring",
-        "--jdbc_table",    "shot_summary",
-        "--jdbc_user",     "aim",
-        "--jdbc_password", "aim3062",
-    ]
+
 
     db_spark = SparkKubernetesOperator(
         task_id="run_spark_shot_summary_daily",
