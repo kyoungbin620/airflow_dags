@@ -262,7 +262,7 @@ def raw_to_swingdata_daily_dag():
             "mainApplicationFile": "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py",
             "deps":{
                 "jars": [
-                    "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar,
+                    "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar",
                     "local:///opt/spark/jars/hadoop-aws-3.3.4.jar",
                     "local:///opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar"
                     ]
