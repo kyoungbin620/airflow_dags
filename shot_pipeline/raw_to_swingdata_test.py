@@ -122,8 +122,7 @@ def raw_to_swingdata_daily_dag():
             "image":               spark_image,
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
-            "deps":
-                "pyFiles": "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip"
+            "deps":{"pyFiles": "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip"},
             "arguments": [
                 "--start-date", date_template,
                 "--end-date",   date_template,
@@ -249,9 +248,7 @@ def raw_to_swingdata_daily_dag():
             "image":               spark_image,
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py",
-            "jars": [
-                "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar"
-            ],
+            "deps":{"jars": "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar"},
             "arguments": [
                 "--start_date",    date_template,
                 "--end_date",      date_template,
