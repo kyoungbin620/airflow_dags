@@ -38,7 +38,12 @@ spark_task = SparkKubernetesOperator(
             'sparkVersion': '3.5.3',
             'image': '577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4',
             'imagePullPolicy': 'Always',
-            'mainApplicationFile': 's3a://creatz-airflow-jobs/test/test.py',
+            'mainApplicationFile': 's3a://creatz-airflow-jobs/test/scripts/test.py',
+            'deps': {
+                        'pyFiles': [
+                            's3a://creatz-airflow-jobs/test/zips/dependencies.zip'
+                        ]
+                    },
             'restartPolicy': {
                 'type': 'Never'
             },
