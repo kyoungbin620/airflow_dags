@@ -36,6 +36,13 @@ spark_configs = {
     "spark.kubernetes.executor.limit.cores": "2",           # Executor 최대 사용 CPU
 
     # ─────────────────────────────
+    # 클래스패스 명시적 추가 (S3A 문제 해결)
+    # ─────────────────────────────
+    "spark.driver.extraClassPath": "/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar",
+    "spark.executor.extraClassPath": "/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar",
+    
+
+    # ─────────────────────────────
     # 쿼리 성능 최적화
     # ─────────────────────────────
     "spark.sql.adaptive.enabled": "true",                   # AQE 활성화
@@ -67,18 +74,7 @@ spark_configs = {
     "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
 
 
-    # ─────────────────────────────
-    # 클래스패스에 AWS JAR 강제 포함
-    # ─────────────────────────────
-    "spark.driver.extraClassPath": (
-        "/opt/spark/jars/hadoop-aws-3.3.4.jar:"
-        "/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar"
-    ),
-    "spark.executor.extraClassPath": (
-        "/opt/spark/jars/hadoop-aws-3.3.4.jar:"
-        "/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar"
-    ),
-    
+
     # ─────────────────────────────
     # Kubernetes 설정
     # ─────────────────────────────
@@ -132,11 +128,7 @@ def raw_to_swingdata_daily_dag():
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
             "deps":{
-                "pyFiles": ["s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip"],
-                "jars": [
-                    "local:///opt/spark/jars/hadoop-aws-3.3.4.jar",
-                    "local:///opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar"
-                ]
+                "pyFiles": ["s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip"]
                 },
             "arguments": [
                 "--start-date", date_template,
@@ -200,12 +192,6 @@ def raw_to_swingdata_daily_dag():
             "image":               spark_image,
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "s3a://creatz-airflow-jobs/base_to_swingdata/scripts/run_swingdata_extract_pipeline.py",
-            "deps":{
-                "jars": [
-                    "local:///opt/spark/jars/hadoop-aws-3.3.4.jar",
-                    "local:///opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar"
-                ]
-                },
             "arguments": [
                 "--start-date", date_template,
                 "--end-date",   date_template,
@@ -272,8 +258,6 @@ def raw_to_swingdata_daily_dag():
             "deps":{
                 "jars": [
                     "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar",
-                    "local:///opt/spark/jars/hadoop-aws-3.3.4.jar",
-                    "local:///opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar"
                     ]
                 },
             "arguments": [
