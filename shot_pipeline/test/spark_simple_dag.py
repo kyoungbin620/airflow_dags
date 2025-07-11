@@ -16,7 +16,7 @@ dag = DAG(
     'spark_simple_dag',
     default_args=default_args,
     description='A simple Spark DAG with custom image',
-    schedule_interval=None,  # 수동 실행
+    schedule_interval=None,
     catchup=False,
     tags=['spark', 'example'],
 )
@@ -40,31 +40,39 @@ spark_task = SparkKubernetesOperator(
             'imagePullPolicy': 'Always',
             'mainApplicationFile': 's3a://creatz-airflow-jobs/test/scripts/test.py',
             'deps': {
-                        'pyFiles': [
-                            's3a://creatz-airflow-jobs/test/zips/dependencies.zip'
-                        ]
-                    },
+                'pyFiles': [
+                    'local:///opt/spark/deps/dependencies.zip'  # S3 → local로 변경
+                ]
+            },
             'restartPolicy': {
                 'type': 'Never'
             },
             'sparkConf': {
-                    "spark.hadoop.fs.s3a.endpoint": "s3.us-west-2.amazonaws.com",
-                    "spark.hadoop.fs.s3a.endpoint.region": "us-west-2",
-                    "spark.hadoop.fs.s3a.access.style": "PathStyle",
-                    "spark.hadoop.fs.s3a.path.style.access": "true",
-                    "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
-                    "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
+                "spark.driver.extraJavaOptions": "-Djava.ext.dirs=/opt/spark/jars",
+                "spark.executor.extraJavaOptions": "-Djava.ext.dirs=/opt/spark/jars",
+                "spark.hadoop.fs.s3a.endpoint": "s3.us-west-2.amazonaws.com",
+                "spark.hadoop.fs.s3a.endpoint.region": "us-west-2",
+                "spark.hadoop.fs.s3a.access.style": "PathStyle",
+                "spark.hadoop.fs.s3a.path.style.access": "true",
+                "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+                "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
             },
             'driver': {
                 'cores': 1,
                 'memory': '2g',
-                'serviceAccount': 'airflow-irsa',  # IRSA 연동된 ServiceAccount
+                'serviceAccount': 'airflow-irsa',
                 'nodeSelector': {
                     'intent': 'spark'
                 },
                 'labels': {
-                     'component': 'spark-driver'
-                }
+                    'component': 'spark-driver'
+                },
+                'volumeMounts': [
+                    {
+                        'name': 'deps-volume',
+                        'mountPath': '/opt/spark/deps'
+                    }
+                ]
             },
             'executor': {
                 'cores': 1,
@@ -75,8 +83,37 @@ spark_task = SparkKubernetesOperator(
                 },
                 'labels': {
                     'component': 'spark-executor'
+                },
+                'volumeMounts': [
+                    {
+                        'name': 'deps-volume',
+                        'mountPath': '/opt/spark/deps'
+                    }
+                ]
+            },
+            'volumes': [
+                {
+                    'name': 'deps-volume',
+                    'emptyDir': {}
                 }
-            }
+            ],
+            'initContainers': [
+                {
+                    'name': 'download-deps',
+                    'image': 'amazonlinux:2',
+                    'command': ['/bin/sh', '-c'],
+                    'args': [
+                        'yum install -y aws-cli > /dev/null && '
+                        'aws s3 cp s3://creatz-airflow-jobs/test/zips/dependencies.zip /opt/spark/deps/dependencies.zip'
+                    ],
+                    'volumeMounts': [
+                        {
+                            'name': 'deps-volume',
+                            'mountPath': '/opt/spark/deps'
+                        }
+                    ]
+                }
+            ]
         }
     },
     get_logs=True,

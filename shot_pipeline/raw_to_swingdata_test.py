@@ -36,14 +36,6 @@ spark_configs = {
     "spark.kubernetes.executor.limit.cores": "2",           # Executor 최대 사용 CPU
 
     # ─────────────────────────────
-    # 클래스패스 명시적 추가 (S3A 문제 해결)
-    # ─────────────────────────────
-    "spark.jars": "file:///opt/spark/jars/hadoop-aws-3.3.4.jar,file:///opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar",
-    "spark.driver.extraClassPath": "/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar",
-    "spark.executor.extraClassPath": "/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar",
-    
-
-    # ─────────────────────────────
     # 쿼리 성능 최적화
     # ─────────────────────────────
     "spark.sql.adaptive.enabled": "true",                   # AQE 활성화
