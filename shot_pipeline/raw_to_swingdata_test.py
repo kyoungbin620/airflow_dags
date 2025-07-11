@@ -38,6 +38,7 @@ spark_configs = {
     # ─────────────────────────────
     # 클래스패스 명시적 추가 (S3A 문제 해결)
     # ─────────────────────────────
+    "spark.jars": "file:///opt/spark/jars/hadoop-aws-3.3.4.jar,file:///opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar",
     "spark.driver.extraClassPath": "/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar",
     "spark.executor.extraClassPath": "/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar",
     
