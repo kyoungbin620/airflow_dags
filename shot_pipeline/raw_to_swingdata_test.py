@@ -66,15 +66,24 @@ spark_configs = {
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
     "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
 
+
+    # ─────────────────────────────
+    # 클래스패스에 AWS JAR 강제 포함
+    # ─────────────────────────────
+    "spark.driver.extraClassPath": (
+        "/opt/spark/jars/hadoop-aws-3.3.4.jar:"
+        "/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar"
+    ),
+    "spark.executor.extraClassPath": (
+        "/opt/spark/jars/hadoop-aws-3.3.4.jar:"
+        "/opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar"
+    ),
+    
     # ─────────────────────────────
     # Kubernetes 설정
     # ─────────────────────────────
     "spark.kubernetes.namespace": "airflow",                          # 실행 namespace
-    "spark.kubernetes.authenticate.driver.serviceAccountName": "airflow-irsa",  # IRSA 서비스계정
     "spark.kubernetes.container.image.pullSecrets": "ecr-pull-secret",         # ECR 인증용 secret
-    "spark.kubernetes.container.image": spark_image,                  # 기본 컨테이너 이미지
-    "spark.kubernetes.driver.container.image": spark_image,          # 드라이버 이미지
-    "spark.kubernetes.file.upload.path": "local:///opt/spark/tmp",   # 임시 파일 업로드 경로
 
     # ─────────────────────────────
     # 노드 선택 및 배치 제어
