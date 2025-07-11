@@ -122,7 +122,7 @@ def raw_to_swingdata_daily_dag():
             "image":               spark_image,
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
-            "pyFiles":             ["s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip"],
+            "archives": ["s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip#dependencies"],
             "arguments": [
                 "--start-date", date_template,
                 "--end-date",   date_template,
