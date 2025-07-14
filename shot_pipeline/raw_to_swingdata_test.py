@@ -119,9 +119,9 @@ def raw_to_swingdata_daily_dag():
             "sparkVersion":        "3.5.3",
             "image":               spark_image,
             "imagePullPolicy":     "Always",
-            "mainApplicationFile": "local:///opt/spark/jobs/raw_to_parquet/run_raw_to_parquet.py",
+            "mainApplicationFile": "local:///home/spark/jobs/raw_to_parquet/run_raw_to_parquet.py",
             "deps":{
-                "pyFiles": ["local:///opt/spark/jobs/raw_to_parquet/dependencies/"]
+                "pyFiles": ["local:///home/spark/jobs/raw_to_parquet/dependencies/"]
                 },
             "arguments": [
                 "--start-date", date_template,
