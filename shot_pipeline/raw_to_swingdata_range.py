@@ -137,6 +137,7 @@ def raw_to_swingdata_daily_dag():
                 "memory":         "6g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
+                "karpenter.sh/do-not-disrupt": "true",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-driver"
@@ -199,6 +200,7 @@ def raw_to_swingdata_daily_dag():
                 "memory":         "6g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
+                "karpenter.sh/do-not-disrupt": "true",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-driver"
@@ -272,6 +274,7 @@ def raw_to_swingdata_daily_dag():
                 "memory":         "6g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
+                "karpenter.sh/do-not-disrupt": "true",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-driver"
