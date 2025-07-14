@@ -96,7 +96,7 @@ def log_to_parquet_dag():
     # ─────────────────────────────
     # 1) Parquet → SwingData
     # ─────────────────────────────
-    base_app = {
+    logs_app = {
         "apiVersion": "sparkoperator.k8s.io/v1beta2",
         "kind":       "SparkApplication",
         "metadata": {
@@ -141,11 +141,11 @@ def log_to_parquet_dag():
     }
 
 
-    base_spark = SparkKubernetesOperator(
+    logs_spark = SparkKubernetesOperator(
         task_id="run_spark_submit_s3_script",
         name="spark-submit-s3-script",
         namespace="airflow",
-        template_spec=base_app,
+        template_spec=logs_app,
         get_logs=True,
         do_xcom_push=False,
         delete_on_termination=True,
@@ -154,8 +154,8 @@ def log_to_parquet_dag():
         reattach_on_restart=True,
         kubernetes_conn_id="kubernetes_default",
     )
+    logs_app
 
-
-    spark_submit
+    
 
 dag_instance = log_to_parquet_dag()
