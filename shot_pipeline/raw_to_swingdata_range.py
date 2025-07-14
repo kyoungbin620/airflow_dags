@@ -97,15 +97,15 @@ spark_configs = {
     },
     tags=["spark", "s3", "parquet"],
 )
-def raw_to_swingdata_daily_dag():
+def raw_to_swingdata_range_dag():
 
     @task()
-    def log_date(yesterday: str):
+    def log_inputs(params=None):
         import logging
-        logging.info(f"[INPUT] processing date: {yesterday}")
+        logging.info(f"[INPUT] start_date: {params['start_date']}")
+        logging.info(f"[INPUT] end_date: {params['end_date']}")
 
-    date_template = "{{ (data_interval_end - macros.timedelta(days=1)).strftime('%Y-%m-%d') }}"
-    log_task = log_date(yesterday=date_template)
+    log_task = log_inputs()
 
     # ─────────────────────────────
     # 1) Raw → Parquet
@@ -137,7 +137,7 @@ def raw_to_swingdata_daily_dag():
                 "memory":         "6g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
-                "karpenter.sh/do-not-disrupt": "true",
+                "podAnnotations": {"karpenter.sh/do-not-disrupt": "true"},
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-driver"
@@ -200,7 +200,7 @@ def raw_to_swingdata_daily_dag():
                 "memory":         "6g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
-                "karpenter.sh/do-not-disrupt": "true",
+                "podAnnotations": {"karpenter.sh/do-not-disrupt": "true"},
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-driver"
@@ -274,7 +274,7 @@ def raw_to_swingdata_daily_dag():
                 "memory":         "6g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
-                "karpenter.sh/do-not-disrupt": "true",
+                "podAnnotations": {"karpenter.sh/do-not-disrupt": "true"},
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-driver"
@@ -315,4 +315,4 @@ def raw_to_swingdata_daily_dag():
     log_task >> raw_spark >> base_spark >> db_spark
 
 # DAG 등록
-raw_to_swingdata_daily = raw_to_swingdata_daily_dag()
+raw_to_swingdata_range = raw_to_swingdata_range_dag()
