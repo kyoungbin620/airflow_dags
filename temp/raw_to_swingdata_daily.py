@@ -1,12 +1,11 @@
 from airflow.decorators import dag, task
 from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.utils.dates import days_ago
-from datetime import datetime, timedelta
-from airflow.models.param import Param
+from datetime import timedelta
 from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
 
 # 공통 설정
-dag_name = "raw_to_swingdata_range_temp"
+dag_name = "raw_to_swingdata_daily_temp"
 spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
 api_server = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
@@ -93,7 +92,7 @@ spark_configs = {
     # ─────────────────────────────
     "spark.kubernetes.executor.node.selector.intent": "spark",       # 노드 선택자 (NodePool과 연결)
 
-    # 이벤트 로그
+        # 이벤트 로그
     "spark.eventLog.enabled": "true",
     "spark.eventLog.dir": "s3a://aim-spark/spark-events"
 }
@@ -101,29 +100,28 @@ spark_configs = {
 @dag(
     dag_id=dag_name,
     default_args=default_args,
-    schedule_interval=None,
-    start_date=days_ago(1),
+    schedule_interval="0 1 * * *",   # 매일 UTC 1시에 실행
+    start_date=days_ago(1),           # DAG 최초 실행 기준
     catchup=False,
-    params={
-        "start_date": Param(default="2025-05-01", type="string", format="%Y-%m-%d", description="시작 날짜"),
-        "end_date":   Param(default="2025-05-02", type="string", format="%Y-%m-%d", description="종료 날짜"),
-    },
     tags=["spark", "s3", "parquet"],
 )
-def raw_to_swingdata_range_dag():
+def raw_to_swingdata_daily_dag():
+
+    # (선택) 전날 날짜 로깅
     @task()
-    def log_inputs(params=None):
+    def log_date(yesterday: str):
         import logging
-        logging.info(f"[INPUT] start_date: {params['start_date']}")
-        logging.info(f"[INPUT] end_date: {params['end_date']}")
+        logging.info(f"[INPUT] processing date: {yesterday}")
 
-    log_task = log_inputs()
+    # 실행 구간(data_interval_end)에서 하루 전 날짜를 yyyy-MM-dd 로 포맷
+    date_template = "{{ (data_interval_end - macros.timedelta(days=1)).strftime('%Y-%m-%d') }}"
 
-    # 공통 arguments 변환
+    log_task = log_date(yesterday=date_template)
+
+    # 공통 --conf 리스트
     common_conf = []
     for key, value in spark_configs.items():
         common_conf += ["--conf", f"{key}={value}"]
-    # UI Proxy 설정
     common_conf += [
         "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
         "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
@@ -137,11 +135,11 @@ def raw_to_swingdata_range_dag():
         *common_conf,
         "--py-files", "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip",
         "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
-        "--start-date", "{{ params.start_date }}",
-        "--end-date", "{{ params.end_date }}",
+        "--start-date", date_template,
+        "--end-date",   date_template,
     ]
     raw_task = KubernetesPodOperator(
-        task_id="run_raw_to_base_range",
+        task_id="run_raw_to_base_daily",
         name="raw-to-base-pipeline",
         namespace="airflow",
         image=spark_image,
@@ -155,7 +153,7 @@ def raw_to_swingdata_range_dag():
         image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
         container_resources=V1ResourceRequirements(
             requests={"memory": "1.5Gi", "cpu": "500m"},
-            limits={"memory": "2Gi", "cpu": "1000m"},
+            limits={"memory": "2Gi",   "cpu": "1000m"},
         ),
     )
 
@@ -166,16 +164,27 @@ def raw_to_swingdata_range_dag():
         "--name", f"{dag_name}-base",
         *common_conf,
         "s3a://creatz-airflow-jobs/base_to_swingdata/scripts/run_swingdata_extract_pipeline.py",
-        "--start-date", "{{ params.start_date }}",
-        "--end-date", "{{ params.end_date }}",
+        "--start-date", date_template,
+        "--end-date",   date_template,
     ]
+
     base_task = KubernetesPodOperator(
-        task_id="run_base_to_swingdata_range",
+        task_id="run_base_to_swingdata_daily",
         name="base-to-swingdata-pipeline",
         namespace="airflow",
         image=spark_image,
-        cmds=["/opt/spark/bin/spark-submit"],
-        arguments=base_args,
+        cmds=["sh", "-c"],
+        arguments=[
+            """
+            echo '[WAIT] ConfigMap 생성 대기 중...';
+            for i in $(seq 1 30); do
+              if [ -f /opt/spark/conf/spark.properties ]; then echo '[OK] spark.properties 발견'; break; fi;
+              echo '[WAIT] spark.properties 없음, 대기 중...';
+              sleep 1;
+            done;
+            echo '[START] spark-submit 실행';
+            /opt/spark/bin/spark-submit """ + " ".join(base_args)
+        ],
         do_xcom_push=False,
         get_logs=True,
         is_delete_operator_pod=False,
@@ -184,13 +193,13 @@ def raw_to_swingdata_range_dag():
         node_selector={"intent": "spark"},
         container_resources=V1ResourceRequirements(
             requests={"memory": "1.5Gi", "cpu": "500m"},
-            limits={"memory": "2Gi", "cpu": "1000m"},
+            limits={"memory": "2Gi",   "cpu": "1000m"},
         ),
-    )
-    
+    ) 
+
     insert_db_task = KubernetesPodOperator(
-        task_id="run_spark_shot_summary_range",
-        name="spark-shot-summary-range",
+        task_id="run_spark_shot_summary_daily",
+        name="spark-shot-summary-daily",
         namespace="airflow",
         image=spark_image,
         cmds=["/opt/spark/bin/spark-submit"],
@@ -206,15 +215,14 @@ def raw_to_swingdata_range_dag():
             # 스크립트 파일
             "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py",
             # 날짜 범위 파라미터
-            "--start_date",  "{{ params.start_date }}",
-            "--end_date",    "{{ params.end_date }}",
+            "--start_date",  date_template,
+            "--end_date",    date_template,
             "--input_s3_base", "s3a://creatz-aim-swing-mx-data-prod/parquet/shotinfo_swingtrace",
             "--jdbc_url",      "jdbc:postgresql://10.133.135.243:5432/monitoring",
             "--jdbc_table",    "shot_summary",
             "--jdbc_user",     "aim",
             "--jdbc_password", "aim3062",
         ],
-        do_xcom_push=False,
         get_logs=True,
         is_delete_operator_pod=False,
         node_selector={"intent": "spark"},
@@ -229,4 +237,4 @@ def raw_to_swingdata_range_dag():
     log_task >> raw_task >> base_task >> insert_db_task
 
 # DAG 인스턴스화
-raw_to_swingdata_range_dag_instance = raw_to_swingdata_range_dag()
+raw_to_swingdata_daily_dag_instance = raw_to_swingdata_daily_dag()

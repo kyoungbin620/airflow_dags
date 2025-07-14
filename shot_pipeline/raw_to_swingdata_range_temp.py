@@ -6,7 +6,7 @@ from datetime import timedelta
 # ─────────────────────────────
 # 공통 설정
 # ─────────────────────────────
-dag_name    = "raw-to-swingdata-test"
+dag_name    = "raw-swingdata-range"
 api_server  = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
 default_args = {
@@ -87,9 +87,13 @@ spark_configs = {
 @dag(
     dag_id=dag_name,
     default_args=default_args,
-    schedule_interval="0 1 * * *",  # 매일 UTC 1시에 실행
+    schedule_interval=None,
     start_date=days_ago(1),
     catchup=False,
+    params={
+        "start_date": Param(default="2025-05-01", type="string", format="%Y-%m-%d", description="시작 날짜"),
+        "end_date":   Param(default="2025-05-02", type="string", format="%Y-%m-%d", description="종료 날짜"),
+    },
     tags=["spark", "s3", "parquet"],
 )
 def raw_to_swingdata_daily_dag():
@@ -123,8 +127,8 @@ def raw_to_swingdata_daily_dag():
                 "pyFiles": ["local:///home/spark/jobs/scripts/dependencies/"]
                 },
             "arguments": [
-                "--start-date", date_template,
-                "--end-date",   date_template,
+                "--start-date", "{{ params.start_date }}",
+                "--end-date", "{{ params.end_date }}",
             ],
             "sparkConf":          spark_configs,
             "driver": {
@@ -185,8 +189,8 @@ def raw_to_swingdata_daily_dag():
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "local:///home/spark/jobs/scripts/run_swingdata_extract_pipeline.py",
             "arguments": [
-                "--start-date", date_template,
-                "--end-date",   date_template,
+                "--start-date", "{{ params.start_date }}",
+                "--end-date", "{{ params.end_date }}",
             ],
             "sparkConf":          spark_configs,
             "driver": {
@@ -253,8 +257,8 @@ def raw_to_swingdata_daily_dag():
                     ]
                 },
             "arguments": [
-                "--start_date",    date_template,
-                "--end_date",      date_template,
+                "--start-date", "{{ params.start_date }}",
+                "--end-date", "{{ params.end_date }}",
                 "--input_s3_base", "s3a://creatz-aim-swing-mx-data-prod/parquet/shotinfo_swingtrace",
                 "--jdbc_url",      "jdbc:postgresql://10.133.135.243:5432/monitoring",
                 "--jdbc_table",    "shot_summary",

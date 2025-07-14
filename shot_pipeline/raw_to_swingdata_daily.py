@@ -1,13 +1,13 @@
+from airflow import DAG
+from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
 from airflow.decorators import dag, task
-from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 from airflow.utils.dates import days_ago
 from datetime import timedelta
-from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
-
+# ─────────────────────────────
 # 공통 설정
-dag_name = "raw_to_swingdata_daily"
-spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
-api_server = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
+# ─────────────────────────────
+dag_name    = "raw-swingdata-daily"
+api_server  = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
 default_args = {
     "owner": "airflow",
@@ -15,24 +15,12 @@ default_args = {
     "retry_delay": timedelta(minutes=3),
 }
 
+# ─────────────────────────────
+# Spark 공통 sparkConf 설정
+# ─────────────────────────────
+
 # Spark 공통 구성
 spark_configs = {
-    # ─────────────────────────────
-    # 드라이버 설정
-    # ─────────────────────────────
-    "spark.driver.cores": "2",
-    "spark.driver.memory": "6g",
-    "spark.driver.memoryOverhead": "512m",
-    "spark.driver.maxResultSize": "1g",
-
-    # ─────────────────────────────
-    # 실행자 (Executor) 설정
-    # ─────────────────────────────
-    "spark.executor.cores": "2",                            # Executor 하나당 사용할 CPU 수
-    "spark.executor.memory": "2g",                          # Executor 메모리
-    "spark.executor.memoryOverhead": "512m",                  # JVM 외 메모리 오버헤드 (압축 해제시 필요)
-
-    
     "spark.dynamicAllocation.enabled": "true",              # Executor 수 자동 조정 활성화
     "spark.dynamicAllocation.minExecutors": "2",            # 최소 Executor 수
     "spark.dynamicAllocation.initialExecutors": "4",        # 초기 Executor 수
@@ -77,15 +65,13 @@ spark_configs = {
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
     "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
 
+
+
     # ─────────────────────────────
     # Kubernetes 설정
     # ─────────────────────────────
     "spark.kubernetes.namespace": "airflow",                          # 실행 namespace
-    "spark.kubernetes.authenticate.driver.serviceAccountName": "airflow-irsa",  # IRSA 서비스계정
     "spark.kubernetes.container.image.pullSecrets": "ecr-pull-secret",         # ECR 인증용 secret
-    "spark.kubernetes.container.image": spark_image,                  # 기본 컨테이너 이미지
-    "spark.kubernetes.driver.container.image": spark_image,          # 드라이버 이미지
-    "spark.kubernetes.file.upload.path": "local:///opt/spark/tmp",   # 임시 파일 업로드 경로
 
     # ─────────────────────────────
     # 노드 선택 및 배치 제어
@@ -97,144 +83,228 @@ spark_configs = {
     "spark.eventLog.dir": "s3a://aim-spark/spark-events"
 }
 
+
 @dag(
     dag_id=dag_name,
     default_args=default_args,
-    schedule_interval="0 1 * * *",   # 매일 UTC 1시에 실행
-    start_date=days_ago(1),           # DAG 최초 실행 기준
+    schedule_interval="0 1 * * *",  # 매일 UTC 1시에 실행
+    start_date=days_ago(1),
     catchup=False,
     tags=["spark", "s3", "parquet"],
 )
 def raw_to_swingdata_daily_dag():
 
-    # (선택) 전날 날짜 로깅
     @task()
     def log_date(yesterday: str):
         import logging
         logging.info(f"[INPUT] processing date: {yesterday}")
 
-    # 실행 구간(data_interval_end)에서 하루 전 날짜를 yyyy-MM-dd 로 포맷
     date_template = "{{ (data_interval_end - macros.timedelta(days=1)).strftime('%Y-%m-%d') }}"
-
     log_task = log_date(yesterday=date_template)
 
-    # 공통 --conf 리스트
-    common_conf = []
-    for key, value in spark_configs.items():
-        common_conf += ["--conf", f"{key}={value}"]
-    common_conf += [
-        "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_name}",
-        "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_name}",
-    ]
+    # ─────────────────────────────
+    # 1) Raw → Parquet
+    # ─────────────────────────────
+    raw_app = {
+        "apiVersion": "sparkoperator.k8s.io/v1beta2",
+        "kind":       "SparkApplication",
+        "metadata": {
+            "name":      f"{dag_name}-raw",
+            "namespace": "airflow",
+        },
+        "spec": {
+            "type":                "Python",
+            "mode":                "cluster",
+            "sparkVersion":        "3.5.3",
+            "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/shot-pipeline:raw-parquet-1.0.0",
+            "imagePullPolicy":     "Always",
+            "mainApplicationFile": "local:///home/spark/jobs/scripts/run_raw_to_parquet.py",
+            "deps":{
+                "pyFiles": ["local:///home/spark/jobs/scripts/dependencies/"]
+                },
+            "arguments": [
+                "--start-date", date_template,
+                "--end-date",   date_template,
+            ],
+            "sparkConf":          spark_configs,
+            "driver": {
+                "cores":          2,
+                "memory":         "6g",
+                "memoryOverhead": "512m",
+                "serviceAccount": "airflow-irsa",
+                "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-driver"
+                },
+            },
 
-    # Raw -> Base SparkSubmit
-    raw_args = [
-        "--master", api_server,
-        "--deploy-mode", "cluster",
-        "--name", f"{dag_name}-raw",
-        *common_conf,
-        "--py-files", "s3a://creatz-airflow-jobs/raw_to_parquet/zips/dependencies.zip",
-        "s3a://creatz-airflow-jobs/raw_to_parquet/scripts/run_raw_to_parquet.py",
-        "--start-date", date_template,
-        "--end-date",   date_template,
-    ]
-    raw_task = KubernetesPodOperator(
-        task_id="run_raw_to_base_daily",
-        name="raw-to-base-pipeline",
-        namespace="airflow",
-        image=spark_image,
-        cmds=["/opt/spark/bin/spark-submit"],
-        node_selector={"intent": "spark"},
-        do_xcom_push=False,
-        arguments=raw_args,
-        get_logs=True,
-        is_delete_operator_pod=False,
-        service_account_name="airflow-irsa",
-        image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
-        container_resources=V1ResourceRequirements(
-            requests={"memory": "1.5Gi", "cpu": "500m"},
-            limits={"memory": "2Gi",   "cpu": "1000m"},
-        ),
+            "executor": {
+                "cores":          2,
+                "memory":         "2g",
+                "memoryOverhead": "512m",
+                "instances":      4,  # spark.dynamicAllocation.initialExecutors
+                "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-executor"
+                },
+            },
+
+            "restartPolicy": {"type": "Never"},
+        }
+    }
+
+    raw_spark = SparkKubernetesOperator(
+        task_id="run_raw_to_base_daily",            # Airflow 내에서 이 Operator를 식별할 ID
+        name="raw-to-base-pipeline",                # 생성될 SparkApplication CRD의 metadata.name
+        namespace="airflow",                        # SparkApplication이 생성될 k8s 네임스페이스
+        template_spec=raw_app,                      # 위에서 정의한 SparkApplication 스펙 전체
+        get_logs=True,                              # 드라이버 로그를 Airflow UI에서 실시간으로 가져올지 여부
+        do_xcom_push=False,                         # SparkApplication 결과를 XCom에 저장할지 여부
+        delete_on_termination=False,                 # 완료 후 k8s 리소리(Driver/Executor Pod 및 CRD)를 자동 삭제
+        startup_timeout_seconds=600,                # SparkApplication이 준비 상태를 기다리는 최대 시간(초)
+        log_events_on_failure=True,                 # 실패 시 k8s 이벤트를 함께 로깅해서 문제 원인 파악을 돕기
+        reattach_on_restart=True,                   # Airflow 스케줄러 재시작 후에도 기존 SparkApplication에 재연결
+        kubernetes_conn_id="kubernetes_default",    # Airflow에 설정된 k8s 클러스터 연결 ID
     )
 
-    # Base -> SwingData SparkSubmit
-    base_args = [
-        "--master", api_server,
-        "--deploy-mode", "cluster",
-        "--name", f"{dag_name}-base",
-        *common_conf,
-        "s3a://creatz-airflow-jobs/base_to_swingdata/scripts/run_swingdata_extract_pipeline.py",
-        "--start-date", date_template,
-        "--end-date",   date_template,
-    ]
+    # ─────────────────────────────
+    # 2) Parquet → SwingData
+    # ─────────────────────────────
+    base_app = {
+        "apiVersion": "sparkoperator.k8s.io/v1beta2",
+        "kind":       "SparkApplication",
+        "metadata": {
+            "name":      f"{dag_name}-base",
+            "namespace": "airflow",
+        },
+        "spec": {
+            "type":                "Python",
+            "mode":                "cluster",
+            "sparkVersion":        "3.5.3",
+            "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/shot-pipeline:refine-parquet-1.0.0",
+            "imagePullPolicy":     "Always",
+            "mainApplicationFile": "local:///home/spark/jobs/scripts/run_swingdata_extract_pipeline.py",
+            "arguments": [
+                "--start-date", date_template,
+                "--end-date",   date_template,
+            ],
+            "sparkConf":          spark_configs,
+            "driver": {
+                "cores":          2,
+                "memory":         "6g",
+                "memoryOverhead": "512m",
+                "serviceAccount": "airflow-irsa",
+                "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-driver"
+                },
+            },
 
-    base_task = KubernetesPodOperator(
+            "executor": {
+                "cores":          2,
+                "memory":         "2g",
+                "memoryOverhead": "512m",
+                "instances":      4,  # spark.dynamicAllocation.initialExecutors
+                "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-executor"
+                },
+            },
+
+            "restartPolicy": {"type": "Never"},
+        }
+    }
+
+
+    base_spark = SparkKubernetesOperator(
         task_id="run_base_to_swingdata_daily",
         name="base-to-swingdata-pipeline",
         namespace="airflow",
-        image=spark_image,
-        cmds=["sh", "-c"],
-        arguments=[
-            """
-            echo '[WAIT] ConfigMap 생성 대기 중...';
-            for i in $(seq 1 30); do
-              if [ -f /opt/spark/conf/spark.properties ]; then echo '[OK] spark.properties 발견'; break; fi;
-              echo '[WAIT] spark.properties 없음, 대기 중...';
-              sleep 1;
-            done;
-            echo '[START] spark-submit 실행';
-            /opt/spark/bin/spark-submit """ + " ".join(base_args)
-        ],
-        do_xcom_push=False,
+        template_spec=base_app,
         get_logs=True,
-        is_delete_operator_pod=False,
-        service_account_name="airflow-irsa",
-        image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
-        node_selector={"intent": "spark"},
-        container_resources=V1ResourceRequirements(
-            requests={"memory": "1.5Gi", "cpu": "500m"},
-            limits={"memory": "2Gi",   "cpu": "1000m"},
-        ),
-    ) 
+        do_xcom_push=False,
+        delete_on_termination=True,
+        startup_timeout_seconds=600,
+        log_events_on_failure=True,
+        reattach_on_restart=True,
+        kubernetes_conn_id="kubernetes_default",
+    )
 
-    insert_db_task = KubernetesPodOperator(
+    # ─────────────────────────────
+    # 3) SwingData → Database
+    # ─────────────────────────────
+    db_app = {
+        "apiVersion": "sparkoperator.k8s.io/v1beta2",
+        "kind":       "SparkApplication",
+        "metadata": {
+            "name":      f"{dag_name}-db",
+            "namespace": "airflow",
+        },
+        "spec": {
+            "type":                "Python",
+            "mode":                "cluster",
+            "sparkVersion":        "3.5.3",
+            "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/shot-pipeline:feature-db-1.0.0",
+            "imagePullPolicy":     "Always",
+            "mainApplicationFile": "local:///home/spark/jobs/scripts/run_swingdata_extract_database.py",
+            "deps":{
+                "jars": [
+                    "local:///opt/spark/jars/postgresql-42.7.3.jar",
+                    ]
+                },
+            "arguments": [
+                "--start_date",    date_template,
+                "--end_date",      date_template,
+                "--input_s3_base", "s3a://creatz-aim-swing-mx-data-prod/parquet/shotinfo_swingtrace",
+                "--jdbc_url",      "jdbc:postgresql://10.133.135.243:5432/monitoring",
+                "--jdbc_table",    "shot_summary",
+                "--jdbc_user",     "aim",
+                "--jdbc_password", "aim3062",
+            ],
+            "sparkConf":          spark_configs,
+            "driver": {
+                "cores":          2,
+                "memory":         "6g",
+                "memoryOverhead": "512m",
+                "serviceAccount": "airflow-irsa",
+                "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-driver"
+                },
+            },
+            "executor": {
+                "cores":          2,
+                "memory":         "2g",
+                "memoryOverhead": "512m",
+                "instances":      4,  # spark.dynamicAllocation.initialExecutors
+                "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-executor"
+                },
+            },
+            "restartPolicy": {"type": "Never"},
+        }
+    }
+
+
+    db_spark = SparkKubernetesOperator(
         task_id="run_spark_shot_summary_daily",
         name="spark-shot-summary-daily",
         namespace="airflow",
-        image=spark_image,
-        cmds=["/opt/spark/bin/spark-submit"],
-        arguments=[
-            # 클러스터 및 모드
-            "--master",      api_server,
-            "--deploy-mode", "cluster",
-            "--name",        f"{dag_name}-job",
-            # 공통 conf
-            *common_conf,
-            # JAR 하나만 추가
-            "--jars",       "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar",
-            # 스크립트 파일
-            "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py",
-            # 날짜 범위 파라미터
-            "--start_date",  date_template,
-            "--end_date",    date_template,
-            "--input_s3_base", "s3a://creatz-aim-swing-mx-data-prod/parquet/shotinfo_swingtrace",
-            "--jdbc_url",      "jdbc:postgresql://10.133.135.243:5432/monitoring",
-            "--jdbc_table",    "shot_summary",
-            "--jdbc_user",     "aim",
-            "--jdbc_password", "aim3062",
-        ],
+        template_spec=db_app,
         get_logs=True,
-        is_delete_operator_pod=False,
-        node_selector={"intent": "spark"},
-        service_account_name="airflow-irsa",
-        image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
-        container_resources=V1ResourceRequirements(
-            requests={"memory": "2Gi", "cpu": "500m"},
-            limits=  {"memory": "4Gi", "cpu": "1000m"},
-        ),
+        do_xcom_push=False,
+        delete_on_termination=True,
+        startup_timeout_seconds=600,
+        log_events_on_failure=True,
+        reattach_on_restart=True,
+        kubernetes_conn_id="kubernetes_default",
     )
 
-    log_task >> raw_task >> base_task >> insert_db_task
+    # ─────────────────────────────
+    # 태스크 의존성 정의
+    # ─────────────────────────────
+    log_task >> raw_spark >> base_spark >> db_spark
 
-# DAG 인스턴스화
-raw_to_swingdata_daily_dag_instance = raw_to_swingdata_daily_dag()
+# DAG 등록
+raw_to_swingdata_daily = raw_to_swingdata_daily_dag()
