@@ -7,7 +7,6 @@ from datetime import timedelta
 # 공통 설정
 # ─────────────────────────────
 dag_name    = "raw-to-swingdata-test"
-spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/airflow/scripts:shot-pipeline-raw-to-parquet-v1"
 api_server  = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
 default_args = {
@@ -117,9 +116,9 @@ def raw_to_swingdata_daily_dag():
             "type":                "Python",
             "mode":                "cluster",
             "sparkVersion":        "3.5.3",
-            "image":               spark_image,
+            "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/shot-pipeline:raw-parquet-1.0.0",
             "imagePullPolicy":     "Always",
-            "mainApplicationFile": "local:///home/spark/jobs/raw_to_parquet/run_raw_to_parquet.py",
+            "mainApplicationFile": "local:///home/spark/jobs/scripts/run_raw_to_parquet.py",
             "deps":{
                 "pyFiles": ["local:///home/spark/jobs/raw_to_parquet/dependencies/"]
                 },
@@ -182,9 +181,9 @@ def raw_to_swingdata_daily_dag():
             "type":                "Python",
             "mode":                "cluster",
             "sparkVersion":        "3.5.3",
-            "image":               spark_image,
+            "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/shot-pipeline:refine-parquet-1.0.0",
             "imagePullPolicy":     "Always",
-            "mainApplicationFile": "s3a://creatz-airflow-jobs/base_to_swingdata/scripts/run_swingdata_extract_pipeline.py",
+            "mainApplicationFile": "local:///home/spark/jobs/scripts/run_swingdata_extract_pipeline.py",
             "arguments": [
                 "--start-date", date_template,
                 "--end-date",   date_template,
@@ -245,12 +244,12 @@ def raw_to_swingdata_daily_dag():
             "type":                "Python",
             "mode":                "cluster",
             "sparkVersion":        "3.5.3",
-            "image":               spark_image,
+            "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/shot-pipeline:feature-db-1.0.0",
             "imagePullPolicy":     "Always",
-            "mainApplicationFile": "s3a://creatz-airflow-jobs/swingdata_to_database/scripts/run_swingdata_extract_database.py",
+            "mainApplicationFile": "local:///home/spark/jobs/scripts/run_swingdata_extract_database.py",
             "deps":{
                 "jars": [
-                    "s3a://creatz-airflow-jobs/swingdata_to_database/jars/postgresql-42.7.3.jar",
+                    "local:///opt/spark/jars/postgresql-42.7.3.jar",
                     ]
                 },
             "arguments": [
