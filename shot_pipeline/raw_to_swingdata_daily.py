@@ -6,7 +6,7 @@ from datetime import timedelta
 # ─────────────────────────────
 # 공통 설정
 # ─────────────────────────────
-dag_name    = "raw-swingdata-daily"
+dag_name    = "raw-to-swingdata-daily"
 api_server  = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
 default_args = {
