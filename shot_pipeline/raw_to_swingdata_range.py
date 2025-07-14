@@ -32,8 +32,8 @@ spark_configs = {
     # ─────────────────────────────
     # 리소스 요청/제한 (Kubernetes 스케줄링용)
     # ─────────────────────────────
-    "spark.kubernetes.driver.request.cores": "2",           # 드라이버가 요청하는 CPU
-    "spark.kubernetes.driver.limit.cores": "2",             # 드라이버 최대 사용 CPU
+    "spark.kubernetes.driver.request.cores": "1",           # 드라이버가 요청하는 CPU
+    "spark.kubernetes.driver.limit.cores": "1",             # 드라이버 최대 사용 CPU
     "spark.kubernetes.executor.request.cores": "2",         # Executor가 요청하는 CPU
     "spark.kubernetes.executor.limit.cores": "2",           # Executor 최대 사용 CPU
 
@@ -136,13 +136,14 @@ def raw_to_swingdata_range_dag():
             "sparkConf":          spark_configs,
             "driver": {
                 "cores":          2,
-                "memory":         "6g",
+                "memory":         "4g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-driver"
                 },
+                "podAnnotations": {"karpenter.sh/do-not-disrupt": "true"} 
             },
 
             "executor": {
@@ -197,13 +198,14 @@ def raw_to_swingdata_range_dag():
             "sparkConf":          spark_configs,
             "driver": {
                 "cores":          2,
-                "memory":         "6g",
+                "memory":         "4g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-driver"
                 },
+                "podAnnotations": {"karpenter.sh/do-not-disrupt": "true"} 
             },
 
             "executor": {
@@ -269,13 +271,14 @@ def raw_to_swingdata_range_dag():
             "sparkConf":          spark_configs,
             "driver": {
                 "cores":          2,
-                "memory":         "6g",
+                "memory":         "4g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-driver"
                 },
+                "podAnnotations": {"karpenter.sh/do-not-disrupt": "true"} 
             },
             "executor": {
                 "cores":          2,
