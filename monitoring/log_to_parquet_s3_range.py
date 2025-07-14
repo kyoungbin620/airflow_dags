@@ -1,5 +1,5 @@
 from airflow.decorators import dag
-from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
+from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
 from airflow.utils.dates import days_ago
 from datetime import timedelta
 from airflow.models.param import Param
