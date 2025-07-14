@@ -30,8 +30,8 @@ spark_configs = {
     # ─────────────────────────────
     # 리소스 요청/제한 (Kubernetes 스케줄링용)
     # ─────────────────────────────
-    "spark.kubernetes.driver.request.cores": "1",           # 드라이버가 요청하는 CPU
-    "spark.kubernetes.driver.limit.cores": "1",             # 드라이버 최대 사용 CPU
+    "spark.kubernetes.driver.request.cores": "2",           # 드라이버가 요청하는 CPU
+    "spark.kubernetes.driver.limit.cores": "2",             # 드라이버 최대 사용 CPU
     "spark.kubernetes.executor.request.cores": "2",         # Executor가 요청하는 CPU
     "spark.kubernetes.executor.limit.cores": "2",           # Executor 최대 사용 CPU
 
