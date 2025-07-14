@@ -5,7 +5,7 @@ from datetime import timedelta
 from airflow.models.param import Param
 from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
 
-dag_id = "log_to_parquet_s3_range"
+dag_name = "log_to_parquet_s3_range"
 api_server  = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
 default_args = {
@@ -100,7 +100,7 @@ def log_to_parquet_dag():
         "apiVersion": "sparkoperator.k8s.io/v1beta2",
         "kind":       "SparkApplication",
         "metadata": {
-            "name":      f"{dag_name}-base",
+            "name":      f"{dag_name}",
             "namespace": "airflow",
         },
         "spec": {
