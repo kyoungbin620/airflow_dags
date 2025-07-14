@@ -6,37 +6,23 @@ from airflow.models.param import Param
 from kubernetes.client import V1ResourceRequirements, V1LocalObjectReference
 
 dag_id = "log_to_parquet_s3_range"
-spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
-api_server = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
+api_server  = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
 default_args = {
     "owner": "airflow",
-    "retries": 1,
+    "retries": 0,
     "retry_delay": timedelta(minutes=3),
 }
 
-# Spark 설정 중앙 관리
+
+# Spark 공통 구성
 spark_configs = {
-    # ─────────────────────────────
-    # 드라이버 설정
-    # ─────────────────────────────
-    "spark.driver.cores": "2",
-    "spark.driver.memory": "6g",
-    "spark.driver.memoryOverhead": "512m",
-    "spark.driver.maxResultSize": "1g",
-
-    # ─────────────────────────────
-    # 실행자 (Executor) 설정
-    # ─────────────────────────────
-    "spark.executor.cores": "2",                            # Executor 하나당 사용할 CPU 수
-    "spark.executor.memory": "2g",                          # Executor 메모리
-    "spark.executor.memoryOverhead": "512m",                  # JVM 외 메모리 오버헤드 (압축 해제시 필요)
-
-    
     "spark.dynamicAllocation.enabled": "true",              # Executor 수 자동 조정 활성화
     "spark.dynamicAllocation.minExecutors": "2",            # 최소 Executor 수
-    "spark.dynamicAllocation.initialExecutors": "2",        # 초기 Executor 수
-    "spark.dynamicAllocation.maxExecutors": "4",           # 최대 Executor 수 (Karpenter가 자동으로 노드 증설)
+    "spark.dynamicAllocation.initialExecutors": "4",        # 초기 Executor 수
+    "spark.dynamicAllocation.maxExecutors": "32",           # 최대 Executor 수 (Karpenter가 자동으로 노드 증설)
+    "spark.dynamicAllocation.executorIdleTimeout": "600s", # 10분 (600초)으로 설정 권장
+
 
     # ─────────────────────────────
     # 리소스 요청/제한 (Kubernetes 스케줄링용)
@@ -77,22 +63,19 @@ spark_configs = {
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
     "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
 
+
+
     # ─────────────────────────────
     # Kubernetes 설정
     # ─────────────────────────────
     "spark.kubernetes.namespace": "airflow",                          # 실행 namespace
-    "spark.kubernetes.authenticate.driver.serviceAccountName": "airflow-irsa",  # IRSA 서비스계정
     "spark.kubernetes.container.image.pullSecrets": "ecr-pull-secret",         # ECR 인증용 secret
-    "spark.kubernetes.container.image": spark_image,                  # 기본 컨테이너 이미지
-    "spark.kubernetes.driver.container.image": spark_image,          # 드라이버 이미지
-    "spark.kubernetes.file.upload.path": "local:///opt/spark/tmp",   # 임시 파일 업로드 경로
 
     # ─────────────────────────────
     # 노드 선택 및 배치 제어
     # ─────────────────────────────
     "spark.kubernetes.executor.node.selector.intent": "spark",       # 노드 선택자 (NodePool과 연결)
-    "spark.kubernetes.executor.deleteOnTermination": "true",       
-    "spark.kubernetes.driver.deleteOnTermination": "true",      
+
         # 이벤트 로그
     "spark.eventLog.enabled": "true",
     "spark.eventLog.dir": "s3a://aim-spark/spark-events"
@@ -110,44 +93,68 @@ spark_configs = {
     },
 )
 def log_to_parquet_dag():
+    # ─────────────────────────────
+    # 1) Parquet → SwingData
+    # ─────────────────────────────
+    base_app = {
+        "apiVersion": "sparkoperator.k8s.io/v1beta2",
+        "kind":       "SparkApplication",
+        "metadata": {
+            "name":      f"{dag_name}-base",
+            "namespace": "airflow",
+        },
+        "spec": {
+            "type":                "Python",
+            "mode":                "cluster",
+            "sparkVersion":        "3.5.3",
+            "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/logs-monitoring:raw-parquet-1.0.0",
+            "imagePullPolicy":     "Always",
+            "mainApplicationFile": "local:///home/spark/jobs/scripts/monitoring_logs_to_parquet_daily.py",
+            "arguments": [
+                "--start-date", "{{ params.start_date }}",
+                "--end-date", "{{ params.end_date }}",
+            ],
+            "sparkConf":          spark_configs,
+            "driver": {
+                "cores":          2,
+                "memory":         "6g",
+                "memoryOverhead": "512m",
+                "serviceAccount": "airflow-irsa",
+                "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-driver"
+                },
+            },
 
-    # spark_configs → --conf로 변환
-    spark_conf_args = []
-    for key, value in spark_configs.items():
-        spark_conf_args.extend(["--conf", f"{key}={value}"])
+            "executor": {
+                "cores":          2,
+                "memory":         "2g",
+                "memoryOverhead": "512m",
+                "nodeSelector":   {"intent": "spark"},
+                "labels": {
+                    "component": "spark-executor"
+                },
+            },
 
-    # UI proxy 관련 conf 추가
-    spark_conf_args.extend([
-        "--conf", f"spark.ui.proxyBase=/spark-ui/{dag_id}",
-        "--conf", f"spark.kubernetes.driver.label.spark-ui-selector={dag_id}",
-        "--conf", "spark.kubernetes.executor.deleteOnTermination=true",
-    ])
+            "restartPolicy": {"type": "Never"},
+        }
+    }
 
-    spark_submit = KubernetesPodOperator(
+
+    base_spark = SparkKubernetesOperator(
         task_id="run_spark_submit_s3_script",
         name="spark-submit-s3-script",
         namespace="airflow",
-        image=spark_image,
-        cmds=["/opt/spark/bin/spark-submit"],
-        node_selector={"intent": "spark"},
-        arguments=[
-            "--master", api_server,
-            "--deploy-mode", "cluster",
-            "--name", dag_id,
-            *spark_conf_args,
-            "s3a://creatz-airflow-jobs/monitoring/scripts/monitoring_logs_to_parquet_daily.py",
-            "--start-date", "{{ params.start_date }}",
-            "--end-date", "{{ params.end_date }}",
-        ],
+        template_spec=base_app,
         get_logs=True,
-        is_delete_operator_pod=True,
-        service_account_name="airflow-irsa",
-        image_pull_secrets=[V1LocalObjectReference(name="ecr-pull-secret")],
-        container_resources=V1ResourceRequirements(
-            requests={"memory": "1Gi", "cpu": "500m"},
-            limits={"memory": "2Gi", "cpu": "1000m"},
-        )
+        do_xcom_push=False,
+        delete_on_termination=True,
+        startup_timeout_seconds=600,
+        log_events_on_failure=True,
+        reattach_on_restart=True,
+        kubernetes_conn_id="kubernetes_default",
     )
+
 
     spark_submit
 
