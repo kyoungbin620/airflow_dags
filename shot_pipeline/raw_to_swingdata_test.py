@@ -120,7 +120,7 @@ def raw_to_swingdata_daily_dag():
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "local:///home/spark/jobs/scripts/run_raw_to_parquet.py",
             "deps":{
-                "pyFiles": ["local:///home/spark/jobs/raw_to_parquet/dependencies/"]
+                "pyFiles": ["local:///home/spark/jobs/scripts/dependencies/"]
                 },
             "arguments": [
                 "--start-date", date_template,
