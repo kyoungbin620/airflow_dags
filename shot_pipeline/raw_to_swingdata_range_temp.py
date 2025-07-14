@@ -2,6 +2,7 @@ from airflow import DAG
 from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import SparkKubernetesOperator
 from airflow.decorators import dag, task
 from airflow.utils.dates import days_ago
+from airflow.models.param import Param
 from datetime import timedelta
 # ─────────────────────────────
 # 공통 설정
