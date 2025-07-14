@@ -91,6 +91,7 @@ spark_configs = {
         "start_date": Param(default="2025-05-01", type="string", format="%Y-%m-%d", description="Start date"),
         "end_date": Param(default="2025-05-02", type="string", format="%Y-%m-%d", description="End date"),
     },
+    tags=["spark", "s3", "parquet"],
 )
 def log_to_parquet_dag():
     # ─────────────────────────────
@@ -142,8 +143,8 @@ def log_to_parquet_dag():
 
 
     logs_spark = SparkKubernetesOperator(
-        task_id="run_spark_submit_s3_script",
-        name="spark-submit-s3-script",
+        task_id="monitoring-log-task-range",
+        name="logs-to-parquet-range",
         namespace="airflow",
         template_spec=logs_app,
         get_logs=True,
