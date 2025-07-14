@@ -26,6 +26,8 @@ spark_configs = {
     "spark.dynamicAllocation.minExecutors": "2",            # 최소 Executor 수
     "spark.dynamicAllocation.initialExecutors": "4",        # 초기 Executor 수
     "spark.dynamicAllocation.maxExecutors": "32",           # 최대 Executor 수 (Karpenter가 자동으로 노드 증설)
+    "spark.dynamicAllocation.executorIdleTimeout": "600s", # 10분 (600초)으로 설정 권장
+
 
     # ─────────────────────────────
     # 리소스 요청/제한 (Kubernetes 스케줄링용)
@@ -148,7 +150,6 @@ def raw_to_swingdata_range_dag():
                 "cores":          2,
                 "memory":         "2g",
                 "memoryOverhead": "512m",
-                "instances":      4,  # spark.dynamicAllocation.initialExecutors
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-executor"
@@ -211,7 +212,6 @@ def raw_to_swingdata_range_dag():
                 "cores":          2,
                 "memory":         "2g",
                 "memoryOverhead": "512m",
-                "instances":      4,  # spark.dynamicAllocation.initialExecutors
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-executor"
@@ -284,7 +284,6 @@ def raw_to_swingdata_range_dag():
                 "cores":          2,
                 "memory":         "2g",
                 "memoryOverhead": "512m",
-                "instances":      4,  # spark.dynamicAllocation.initialExecutors
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-executor"
