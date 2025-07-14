@@ -7,7 +7,7 @@ from datetime import timedelta
 # 공통 설정
 # ─────────────────────────────
 dag_name    = "raw-to-swingdata-test"
-spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/spark:3.5.3-python3.12.2-v4"
+spark_image = "577638362884.dkr.ecr.us-west-2.amazonaws.com/aim/airflow/scripts:shot-pipeline-raw-to-parquet-v1"
 api_server  = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.amazonaws.com"
 
 default_args = {
