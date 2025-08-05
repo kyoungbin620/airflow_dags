@@ -66,7 +66,7 @@ spark_configs = {
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
     "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
 
-
+    "spark.speculation": "false",
 
     # ─────────────────────────────
     # Kubernetes 설정
