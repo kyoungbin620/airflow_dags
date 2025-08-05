@@ -276,8 +276,8 @@ def raw_to_swingdata_daily_dag():
             },
             "executor": {
                 "cores":          2,
-                "memory":         "2g",
-                "memoryOverhead": "512m",
+                "memory":         "4g",
+                "memoryOverhead": "1g",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-executor"
