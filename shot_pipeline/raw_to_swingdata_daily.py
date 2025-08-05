@@ -66,8 +66,6 @@ spark_configs = {
     "spark.hadoop.fs.s3.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
     "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.WebIdentityTokenCredentialsProvider",
 
-    "spark.speculation": "false",
-
     # ─────────────────────────────
     # Kubernetes 설정
     # ─────────────────────────────
@@ -142,7 +140,7 @@ def raw_to_swingdata_daily_dag():
 
             "executor": {
                 "cores":          2,
-                "memory":         "2g",
+                "memory":         "4g",
                 "memoryOverhead": "512m",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
@@ -204,8 +202,8 @@ def raw_to_swingdata_daily_dag():
 
             "executor": {
                 "cores":          2,
-                "memory":         "2g",
-                "memoryOverhead": "512m",
+                "memory":         "4g",
+                "memoryOverhead": "1g",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-executor"
