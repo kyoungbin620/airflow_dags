@@ -71,7 +71,7 @@ spark_configs = {
     # ─────────────────────────────
     "spark.kubernetes.namespace": "airflow",                          # 실행 namespace
     "spark.kubernetes.container.image.pullSecrets": "ecr-pull-secret",         # ECR 인증용 secret
-
+    "spark.speculation": "false",
     # ─────────────────────────────
     # 노드 선택 및 배치 제어
     # ─────────────────────────────
@@ -141,7 +141,7 @@ def raw_to_swingdata_daily_dag():
             "executor": {
                 "cores":          2,
                 "memory":         "4g",
-                "memoryOverhead": "512m",
+                "memoryOverhead": "1g",
                 "nodeSelector":   {"intent": "spark"},
                 "labels": {
                     "component": "spark-executor"
