@@ -71,7 +71,7 @@ spark_configs = {
     # ─────────────────────────────
     "spark.kubernetes.namespace": "airflow",                          # 실행 namespace
     "spark.kubernetes.container.image.pullSecrets": "ecr-pull-secret",         # ECR 인증용 secret
-    "spark.speculation": "false",
+
     # ─────────────────────────────
     # 노드 선택 및 배치 제어
     # ─────────────────────────────
