@@ -75,7 +75,7 @@ spark_configs = {
     # ─────────────────────────────
     # 노드 선택 및 배치 제어
     # ─────────────────────────────
-    "spark.kubernetes.executor.node.selector.intent": "spark",       # 노드 선택자 (NodePool과 연결)
+    "spark.kubernetes.executor.node.selector.intent": "spark-airflow",       # 노드 선택자 (NodePool과 연결)
 
         # 이벤트 로그
     "spark.eventLog.enabled": "true",
@@ -131,7 +131,7 @@ def raw_to_swingdata_daily_dag():
                 "memory":         "6g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
-                "nodeSelector":   {"intent": "spark"},
+                "nodeSelector":   {"intent": "spark-airflow"},
                 "labels": {
                     "component": "spark-driver"
                 },
@@ -142,7 +142,7 @@ def raw_to_swingdata_daily_dag():
                 "cores":          2,
                 "memory":         "4g",
                 "memoryOverhead": "1g",
-                "nodeSelector":   {"intent": "spark"},
+                "nodeSelector":   {"intent": "spark-airflow"},
                 "labels": {
                     "component": "spark-executor"
                 },
@@ -193,7 +193,7 @@ def raw_to_swingdata_daily_dag():
                 "memory":         "6g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
-                "nodeSelector":   {"intent": "spark"},
+                "nodeSelector":   {"intent": "spark-airflow"},
                 "labels": {
                     "component": "spark-driver"
                 },
@@ -204,7 +204,7 @@ def raw_to_swingdata_daily_dag():
                 "cores":          2,
                 "memory":         "4g",
                 "memoryOverhead": "1g",
-                "nodeSelector":   {"intent": "spark"},
+                "nodeSelector":   {"intent": "spark-airflow"},
                 "labels": {
                     "component": "spark-executor"
                 },
@@ -266,7 +266,7 @@ def raw_to_swingdata_daily_dag():
                 "memory":         "6g",
                 "memoryOverhead": "512m",
                 "serviceAccount": "airflow-irsa",
-                "nodeSelector":   {"intent": "spark"},
+                "nodeSelector":   {"intent": "spark-airflow"},
                 "labels": {
                     "component": "spark-driver"
                 },
@@ -276,7 +276,7 @@ def raw_to_swingdata_daily_dag():
                 "cores":          2,
                 "memory":         "4g",
                 "memoryOverhead": "1g",
-                "nodeSelector":   {"intent": "spark"},
+                "nodeSelector":   {"intent": "spark-airflow"},
                 "labels": {
                     "component": "spark-executor"
                 },
