@@ -9,7 +9,7 @@ api_server  = "k8s://https://BFDDB67D4B8EC345DED44952FE9F1F9B.gr7.us-west-2.eks.
 
 default_args = {
     "owner": "airflow",
-    "retries": 1,
+    "retries": 3,
     "retry_delay": timedelta(minutes=10),
 }
 
