@@ -121,6 +121,9 @@ def raw_to_swingdata_daily_dag():
             "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/shot-pipeline:raw-parquet-1.0.0",
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "local:///home/spark/jobs/scripts/run_raw_to_parquet.py",
+            "timeToLiveSeconds": 86400,
+            "successfulRunHistoryLimit": 1,
+            "failedRunHistoryLimit": 3,
             "deps":{
                 "pyFiles": ["local:///home/spark/jobs/scripts/dependencies/"]
                 },
@@ -186,6 +189,9 @@ def raw_to_swingdata_daily_dag():
             "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/shot-pipeline:refine-parquet-1.0.0",
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "local:///home/spark/jobs/scripts/run_swingdata_extract_pipeline.py",
+            "timeToLiveSeconds": 86400,
+            "successfulRunHistoryLimit": 1,
+            "failedRunHistoryLimit": 3,
             "arguments": [
                 "--start-date", date_template,
                 "--end-date",   date_template,
@@ -249,6 +255,9 @@ def raw_to_swingdata_daily_dag():
             "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/shot-pipeline:feature-db-1.0.0",
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "local:///home/spark/jobs/scripts/run_swingdata_extract_database.py",
+            "timeToLiveSeconds": 86400,
+            "successfulRunHistoryLimit": 1,
+            "failedRunHistoryLimit": 3,
             "deps":{
                 "jars": [
                     "local:///opt/spark/jars/postgresql-42.7.3.jar",
