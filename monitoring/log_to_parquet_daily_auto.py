@@ -109,6 +109,9 @@ def log_to_parquet_daily_dag():
             "image":               "577638362884.dkr.ecr.us-west-2.amazonaws.com/spark-job/logs-monitoring:raw-parquet-1.0.0",
             "imagePullPolicy":     "Always",
             "mainApplicationFile": "local:///home/spark/jobs/scripts/monitoring_logs_to_parquet_daily.py",
+            "timeToLiveSeconds": 86400,
+            "successfulRunHistoryLimit": 1,
+            "failedRunHistoryLimit": 3,
             "arguments": [
                 "--start-date", date_template,
                 "--end-date",   date_template,
