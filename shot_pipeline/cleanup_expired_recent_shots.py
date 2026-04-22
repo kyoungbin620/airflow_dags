@@ -72,7 +72,7 @@ with DAG(
             with conn.cursor() as cur:
                 # SKIP LOCKED로 동시성 이슈 방어
                 cur.execute(f"""
-                    SELECT id, left_video_path, right_video_path, swingtrace_path, shotinfo_ai_path, image_assets
+                    SELECT id, shot_guid, account_uid, left_video_path, right_video_path, swingtrace_path, shotinfo_ai_path, image_assets
                     FROM view.recent_shots
                     WHERE retention_status = 'EXPIRED'
                     LIMIT {BATCH_SIZE}
@@ -88,10 +88,12 @@ with DAG(
             s3_keys_by_bucket = {}
 
             for r in rows:
-                row_id, left, right, st, sa, img_assets = r
+                row_id, guid, acc_uid, left, right, st, sa, img_assets = r
                 expired_ids.append(row_id)
                 
-                paths_to_delete = [left, right, st, sa]
+                videos = [p for p in [left, right] if p]
+                jsons = [p for p in [st, sa] if p]
+                images = []
 
                 # JSON 썸네일(image_assets) 경로 일체 추출
                 if img_assets:
@@ -106,7 +108,11 @@ with DAG(
                             if isinstance(asset_list, list):
                                 for item in asset_list:
                                     if isinstance(item, dict) and item.get("path"):
-                                        paths_to_delete.append(item.get("path"))
+                                        images.append(item.get("path"))
+
+                logger.info(f"💡 Target: Account={acc_uid} | Shot={guid} => Videos: {len(videos)}, JSONs: {len(jsons)}, Images: {len(images)}")
+                
+                paths_to_delete = videos + jsons + images
 
                 # Bucket / Key 파싱 (문자열인 것만, 그리고 제외할 원본 bucket_path는 위 리스트에 아예 없음)
                 for path in paths_to_delete:
