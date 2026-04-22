@@ -164,8 +164,9 @@ def raw_to_swingdata_daily_dag():
         namespace="airflow",                        # SparkApplication이 생성될 k8s 네임스페이스
         template_spec=raw_app,                      # 위에서 정의한 SparkApplication 스펙 전체
         get_logs=True,                              # 드라이버 로그를 Airflow UI에서 실시간으로 가져올지 여부
+        base_container_name="spark-kubernetes-driver",
         do_xcom_push=False,                         # SparkApplication 결과를 XCom에 저장할지 여부
-        delete_on_termination=False,                 # 완료 후 k8s 리소리(Driver/Executor Pod 및 CRD)를 자동 삭제
+        delete_on_termination=True,                 # 완료 후 k8s 리소리(Driver/Executor Pod 및 CRD)를 자동 삭제
         startup_timeout_seconds=600,                # SparkApplication이 준비 상태를 기다리는 최대 시간(초)
         log_events_on_failure=True,                 # 실패 시 k8s 이벤트를 함께 로깅해서 문제 원인 파악을 돕기
         reattach_on_restart=True,                   # Airflow 스케줄러 재시작 후에도 기존 SparkApplication에 재연결
@@ -230,6 +231,7 @@ def raw_to_swingdata_daily_dag():
         namespace="airflow",
         template_spec=base_app,
         get_logs=True,
+        base_container_name="spark-kubernetes-driver",
         do_xcom_push=False,
         delete_on_termination=True,
         startup_timeout_seconds=600,
@@ -304,6 +306,7 @@ def raw_to_swingdata_daily_dag():
         namespace="airflow",
         template_spec=db_app,
         get_logs=True,
+        base_container_name="spark-kubernetes-driver",
         do_xcom_push=False,
         delete_on_termination=True,
         startup_timeout_seconds=600,
